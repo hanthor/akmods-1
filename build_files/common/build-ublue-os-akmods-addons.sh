@@ -8,6 +8,8 @@ set "${CI:+-x}" -euo pipefail
 REPO_FILE="/tmp/ublue-os-akmods-addons/rpmbuild/SOURCES/_copr_ublue-os-akmods.repo"
 NEG_REPO_FILE="/tmp/ublue-os-akmods-addons/rpmbuild/SOURCES/negativo17-fedora-multimedia.repo"
 
+mkdir -p "$(dirname "$REPO_FILE")"
+
 if [ -f "$REPO_FILE" ]; then
     echo "priority=85" >> "$REPO_FILE"
 else
