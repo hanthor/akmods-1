@@ -5,6 +5,7 @@ set "${CI:+-x}" -euo pipefail
 ### PREPARE REPOS
 # enable RPMs with alternatives to create them in this image build
 mkdir -p /var/lib/alternatives
+dnf install -y dnf-plugins-core
 
 pushd /tmp/kernel_cache
 KERNEL_VERSION=$(find "$KERNEL_NAME"-*.rpm | grep "$(uname -m)" | grep -P "$KERNEL_NAME-\d+\.\d+\.\d+-\d+.*$(rpm -E '%{dist}')" | sed -E "s/$KERNEL_NAME-//;s/\.rpm//")

@@ -3,6 +3,7 @@
 
 set "${CI:+-x}" -euo pipefail
 
+dnf install -y dnf-plugins-core
 pushd /tmp/kernel_cache
 KERNEL_VERSION=$(find "$KERNEL_NAME"-*.rpm | grep "$(uname -m)" | grep -P "$KERNEL_NAME-\d+\.\d+\.\d+-\d+.*$(rpm -E '%{dist}')" | sed -E "s/$KERNEL_NAME-//;s/\.rpm//")
 popd
