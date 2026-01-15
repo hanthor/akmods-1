@@ -8,8 +8,8 @@ KERNEL_VERSION=$(find "$KERNEL_NAME"-*.rpm | grep "$(uname -m)" | grep -P "$KERN
 popd
 
 ### PREPARE REPOS
-if [[ "${KERNEL_FLAVOR}" =~ "centos" ]]; then
-    echo "Building for CentOS"
+if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]]; then
+    echo "Building for CentOS/AlmaLinux"
     RELEASE="$(rpm -E '%centos')"
     NVIDIA_REPO_NAME="epel-nvidia.repo"
     NVIDIA_EXTRA_PKGS=""
@@ -43,8 +43,8 @@ echo "Installing ${KERNEL_FLAVOR} kernel-cache RPMs..."
 #shellcheck disable=SC2046 # We want word splitting
 dnf install -y "${RPM_PREP[@]}" $(find /tmp/kernel_cache/*.rpm -type f | grep "$(uname -m)" | grep -v uki)
 
-if [[ "${KERNEL_FLAVOR}" =~ "centos" ]]; then
-    echo "Building for CentOS does not require more repos"
+if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]]; then
+    echo "Building for CentOS/AlmaLinux does not require more repos"
 else
     echo "Building for Fedora requires more repo setup"
     # enable more repos
