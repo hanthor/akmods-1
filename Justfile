@@ -60,6 +60,10 @@ get-kernel-version:
         builder=$({{ podman }} run --entrypoint /bin/bash -dt "{{ builder }}")
         dnf="{{ podman }} exec -t $builder dnf"
         $dnf install -y --setopt=install_weak_deps=False dnf-plugins-core >&2
+        if [[ {{ kernel_flavor }} =~ almalinux ]]; then
+             $dnf install -y epel-release >&2
+             $dnf config-manager --set-enabled crb >&2
+        fi
         trap '{{ podman }} rm -f -t 0 $builder &>/dev/null' EXIT SIGTERM
     fi
 
