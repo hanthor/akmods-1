@@ -21,11 +21,17 @@ if [[ "$kernel_flavor" =~ "centos" ]]; then
     CENTOS_VER=$(rpm -E %centos)
     dnf config-manager --set-enabled crb
     dnf -y install "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${CENTOS_VER}.noarch.rpm"
+elif [[ "$kernel_flavor" =~ "almalinux" ]]; then
+    # Epel release for 10 is not yet in the 'latest-10' path potentially or logic differs?
+    # Actually almalinux 10 probably mimics centos stream 10?
+    # Let's assume standard epel-release package works as found in previous steps.
+    dnf install -y epel-release
+    dnf config-manager --set-enabled crb
 fi
 dnf -y install --setopt=install_weak_deps=False dracut rpmrebuild sbsigntools
 
 case "$kernel_flavor" in
-    "centos"|"coreos"*|"main")
+    "centos"|"coreos"*|"main"|"almalinux")
         ;;
     "centos-kmodsig")
         dnf -y install centos-release-kmods-kernel
@@ -49,6 +55,15 @@ if [[ "${kernel_flavor}" == "centos" ]]; then
     curl -#fLO https://mirror.stream.centos.org/"$CENTOS_VER"-stream/BaseOS/"$ARCH"/os/Packages/kernel-uki-virt-"$kernel_version".rpm
     curl -#fLO https://mirror.stream.centos.org/"$CENTOS_VER"-stream/AppStream/"$ARCH"/os/Packages/kernel-devel-"$kernel_version".rpm
     curl -#fLO https://mirror.stream.centos.org/"$CENTOS_VER"-stream/AppStream/"$ARCH"/os/Packages/kernel-devel-matched-"$kernel_version".rpm
+elif [[ "${kernel_flavor}" =~ "almalinux" ]]; then
+    dnf download -y \
+        kernel-"${kernel_version}" \
+        kernel-core-"${kernel_version}" \
+        kernel-modules-"${kernel_version}" \
+        kernel-modules-core-"${kernel_version}" \
+        kernel-modules-extra-"${kernel_version}" \
+        kernel-devel-"${kernel_version}" \
+        kernel-devel-matched-"${kernel_version}"
 elif [[ "${kernel_flavor}" == "centos-kmodsig" ]]; then
     KERNEL_MAJOR_MINOR_PATCH=$(echo "$kernel_version" | cut -d '-' -f 1)
     KERNEL_RELEASE="$(echo "$kernel_version" | cut -d - -f 2 | rev | cut -d . -f 2- | rev)"
@@ -112,6 +127,8 @@ if [[ "${kernel_flavor}" == "centos-kmodsig" ]]; then
       /"${kernel_name}-$kernel_version.rpm" \
       /"${kernel_name}-core-$kernel_version.rpm" \
       /"${kernel_name}-modules-$kernel_version.rpm"
+elif [[ "${kernel_flavor}" =~ "almalinux" ]]; then
+    echo "Skipping kernel installation/signing for AlmaLinux"
 else
   dnf install -y \
       /"${kernel_name}-$kernel_version.rpm" \
@@ -121,66 +138,71 @@ else
       /"${kernel_name}-modules-extra-$kernel_version.rpm"
 fi
 
-# Strip Signatures from non-fedora Kernels
-if [[ ${kernel_flavor} =~ main|coreos|centos ]]; then
-    echo "Will not strip Fedora/CentOS signature(s) from ${kernel_flavor} kernel."
+if [[ "${kernel_flavor}" =~ "almalinux" ]]; then
+    # Skip signing and rebuilding for AlmaLinux
+    :
 else
-    EXISTING_SIGNATURES="$(sbverify --list /usr/lib/modules/"$kernel_version"/vmlinuz | grep '^signature \([0-9]\+\)$' | sed 's/^signature \([0-9]\+\)$/\1/')" || true
-    if [[ -n "$EXISTING_SIGNATURES" ]]; then
-        for SIGNUM in $EXISTING_SIGNATURES; do
-            echo "Found existing signature at signum $SIGNUM, removing..."
-            sbattach --remove /usr/lib/modules/"${kernel_version}"/vmlinuz
-        done
+    # Strip Signatures from non-fedora Kernels
+    if [[ ${kernel_flavor} =~ main|coreos|centos ]]; then
+        echo "Will not strip Fedora/CentOS signature(s) from ${kernel_flavor} kernel."
+    else
+        EXISTING_SIGNATURES="$(sbverify --list /usr/lib/modules/"$kernel_version"/vmlinuz | grep '^signature \([0-9]\+\)$' | sed 's/^signature \([0-9]\+\)$/\1/')" || true
+        if [[ -n "$EXISTING_SIGNATURES" ]]; then
+            for SIGNUM in $EXISTING_SIGNATURES; do
+                echo "Found existing signature at signum $SIGNUM, removing..."
+                sbattach --remove /usr/lib/modules/"${kernel_version}"/vmlinuz
+            done
+        fi
     fi
-fi
 
-# Sign Kernel with Key
-sbsign --cert "$PUBLIC_KEY_PATH" --key "$PRIVATE_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz --output /usr/lib/modules/"${kernel_version}"/vmlinuz
+    # Sign Kernel with Key
+    sbsign --cert "$PUBLIC_KEY_PATH" --key "$PRIVATE_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz --output /usr/lib/modules/"${kernel_version}"/vmlinuz
 
-# Verify Signatures
-sbverify --list /usr/lib/modules/"${kernel_version}"/vmlinuz
-if ! sbverify --cert "$PUBLIC_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
-    exit 1
-fi
-
-rm -f "$PRIVATE_KEY_PATH"
-
-if [[ ${DUAL_SIGN:-} == "true" ]]; then
-    SECOND_PUBLIC_KEY_PATH="/etc/pki/kernel/public/public_key_2.crt"
-    SECOND_PRIVATE_KEY_PATH="/etc/pki/kernel/private/public_key_2.priv"
-    if [[ ! -s "${KCWD}"/certs/private_key_2.priv ]]; then
-        echo "WARNING: Using test signing key."
-        cp "${KCWD}"/certs/private_key_2.priv{.test,}
-        cp "${KCWD}"/certs/public_key_2.der{.test,}
-        find "${KCWD}"/certs/
-    fi
-    openssl x509 -in "${KCWD}"/certs/public_key_2.der -out "${KCWD}"/certs/public_key_2.crt
-    install -Dm644 "${KCWD}"/certs/public_key_2.crt "$SECOND_PUBLIC_KEY_PATH"
-    install -Dm644 "${KCWD}"/certs/private_key_2.priv "$SECOND_PRIVATE_KEY_PATH"
-    sbsign --cert "$SECOND_PUBLIC_KEY_PATH" --key "$SECOND_PRIVATE_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz --output /usr/lib/modules/"${kernel_version}"/vmlinuz
+    # Verify Signatures
     sbverify --list /usr/lib/modules/"${kernel_version}"/vmlinuz
-    if ! sbverify --cert "$SECOND_PUBLIC_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
+    if ! sbverify --cert "$PUBLIC_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
         exit 1
     fi
-    rm -f "$SECOND_PRIVATE_KEY_PATH"
-fi
 
-ln -s / /tmp/buildroot
+    rm -f "$PRIVATE_KEY_PATH"
 
-# Rebuild RPMs and Verify
-rpmrebuild --additional=--buildroot=/tmp/buildroot --batch "${kernel_name}-core-${kernel_version}"
-rm -f /usr/lib/modules/"${kernel_version}"/vmlinuz
-find /tmp
-find /root
-dnf reinstall -y /root/rpmbuild/RPMS/"$(uname -m)"/kernel-*.rpm
+    if [[ ${DUAL_SIGN:-} == "true" ]]; then
+        SECOND_PUBLIC_KEY_PATH="/etc/pki/kernel/public/public_key_2.crt"
+        SECOND_PRIVATE_KEY_PATH="/etc/pki/kernel/private/public_key_2.priv"
+        if [[ ! -s "${KCWD}"/certs/private_key_2.priv ]]; then
+            echo "WARNING: Using test signing key."
+            cp "${KCWD}"/certs/private_key_2.priv{.test,}
+            cp "${KCWD}"/certs/public_key_2.der{.test,}
+            find "${KCWD}"/certs/
+        fi
+        openssl x509 -in "${KCWD}"/certs/public_key_2.der -out "${KCWD}"/certs/public_key_2.crt
+        install -Dm644 "${KCWD}"/certs/public_key_2.crt "$SECOND_PUBLIC_KEY_PATH"
+        install -Dm644 "${KCWD}"/certs/private_key_2.priv "$SECOND_PRIVATE_KEY_PATH"
+        sbsign --cert "$SECOND_PUBLIC_KEY_PATH" --key "$SECOND_PRIVATE_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz --output /usr/lib/modules/"${kernel_version}"/vmlinuz
+        sbverify --list /usr/lib/modules/"${kernel_version}"/vmlinuz
+        if ! sbverify --cert "$SECOND_PUBLIC_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
+            exit 1
+        fi
+        rm -f "$SECOND_PRIVATE_KEY_PATH"
+    fi
 
-# Verify Again
-sbverify --list /usr/lib/modules/"${kernel_version}"/vmlinuz
-if ! sbverify --cert "$PUBLIC_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
-    exit 1
-fi
-if [[ "${DUAL_SIGN:-}" == "true" ]] && ! sbverify --cert "${SECOND_PUBLIC_KEY_PATH:-}" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
-    exit 1
+    ln -s / /tmp/buildroot
+
+    # Rebuild RPMs and Verify
+    rpmrebuild --additional=--buildroot=/tmp/buildroot --batch "${kernel_name}-core-${kernel_version}"
+    rm -f /usr/lib/modules/"${kernel_version}"/vmlinuz
+    find /tmp
+    find /root
+    dnf reinstall -y /root/rpmbuild/RPMS/"$(uname -m)"/kernel-*.rpm
+
+    # Verify Again
+    sbverify --list /usr/lib/modules/"${kernel_version}"/vmlinuz
+    if ! sbverify --cert "$PUBLIC_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
+        exit 1
+    fi
+    if [[ "${DUAL_SIGN:-}" == "true" ]] && ! sbverify --cert "${SECOND_PUBLIC_KEY_PATH:-}" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
+        exit 1
+    fi
 fi
 
 # Make Temp Dir
