@@ -44,10 +44,20 @@ images:
           - *akmods-base
           - *akmods-nvidia
           - *arch-all
+      common:
+        !!merge <<:
+          - *akmods-base
+          - *akmods-common
+          - *arch-all
   "10-kitten":
     almalinux:
       nvidia:
         !!merge <<:
           - *akmods-base
           - *akmods-nvidia
+          - *arch-all
+      common:
+        !!merge <<:
+          - *akmods-base
+          - *akmods-common
           - *arch-all

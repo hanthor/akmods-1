@@ -44,7 +44,9 @@ echo "Installing ${KERNEL_FLAVOR} kernel-cache RPMs..."
 dnf install -y --allowerasing --setopt=install_weak_deps=False "${PREP_RPMS[@]}" $(find /tmp/kernel_cache/*.rpm -type f | grep "$(uname -m)" | grep -v uki | xargs)
 
 # after F44 launches, bump to 45
-if [[ "${VERSION}" -ge 44 && -f /etc/fedora-release ]]; then
+# Parse VERSION to get numeric part for comparison (handles "10-kitten" -> "10")
+VERSION_NUM="${VERSION%%-*}"
+if [[ "${VERSION_NUM}" -ge 44 && -f /etc/fedora-release ]]; then
     # pre-release rpmfusion is in a different location
     sed -i "s%free/fedora/releases%free/fedora/development%" /etc/yum.repos.d/rpmfusion-*.repo
     # pre-release rpmfusion needs to enable testing
