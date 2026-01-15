@@ -120,16 +120,16 @@ jobs:
           wc -c certs/private_key_2.priv
 
       - name: Test Image
-        run: just test ARCH=${{ matrix.architecture }}
+        run: just ARCH=${{ matrix.architecture }} test
         
       - name: Build Image
-        run: just build ARCH=${{ matrix.architecture }}
+        run: just ARCH=${{ matrix.architecture }} build
 
       - name: Push and Sign Image
         if: contains(fromJson('["schedule", "merge_group"]'), github.event_name) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
         run: |
           just login
-          just push ARCH=${{ matrix.architecture }}
+          just ARCH=${{ matrix.architecture }} push
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           REGISTRY_ACTOR: ${{ github.actor }}
