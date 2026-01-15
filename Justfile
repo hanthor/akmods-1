@@ -16,6 +16,7 @@ builder := if kernel_flavor =~ 'centos' { 'quay.io/centos/centos:' + version } e
 kernel_flavor := env('AKMODS_KERNEL', shell('yq ".defaults.kernel_flavor" images.yaml'))
 version := env('AKMODS_VERSION', if kernel_flavor =~ 'centos' { '10' } else { shell('yq ".defaults.version" images.yaml') })
 akmods_target := env('AKMODS_TARGET', if kernel_flavor =~ '(centos|longterm)' { 'zfs' } else { shell('yq ".defaults.akmods_target" images.yaml') })
+ARCH := arch()
 
 # Kernel Pin for coreos-stable (Maximum Version Cap)
 # Set to a specific kernel version (e.g., '6.17.12') to cap coreos-stable builds
@@ -341,11 +342,16 @@ build: (cache-kernel-version) (fetch-kernel)
         "--label" "ostree.linux={{ shell("jq -r '.kernel_release' < $1", version_json) }}"
     )
     TAGS=(
-        "--tag" "{{ akmods_name + ':' + kernel_flavor + '-' + version + '-' + arch() }}"
+        "--tag" "{{ akmods_name + ':' + kernel_flavor + '-' + version + '-' + ARCH }}"
         "--tag" "{{ akmods_name + ':' + kernel_flavor + '-' + version + '-' + shell("jq -r '.kernel_release' < $1", version_json) }}"
     )
 
-    {{ podman }} build -f Containerfile.in --volume {{ KCPATH }}:/tmp/kernel_cache:ro "${CPP_FLAGS[@]}" "${LABELS[@]}" "${TAGS[@]}" --target RPMS {{ justfile_dir () }}
+    PLATFORM_FLAG=()
+    if [[ "{{ ARCH }}" == "x86_64-v2" ]]; then
+        PLATFORM_FLAG+=("--platform" "linux/amd64/v2")
+    fi
+
+    {{ podman }} build -f Containerfile.in --volume {{ KCPATH }}:/tmp/kernel_cache:ro "${CPP_FLAGS[@]}" "${LABELS[@]}" "${TAGS[@]}" "${PLATFORM_FLAG[@]}" --target RPMS {{ justfile_dir () }}
 
 # Test Cached Akmod RPMs
 [group('Build')]
@@ -390,10 +396,10 @@ push:
 
     set ${CI:+-x} -eou pipefail
 
-    declare -a TAGS=($({{ podman }} image list {{ 'localhost' / akmods_name + ':' + kernel_flavor + '-' + version + '-' + arch() }} --noheading --format 'table {{{{ .Tag }}'))
+    declare -a TAGS=($({{ podman }} image list {{ 'localhost' / akmods_name + ':' + kernel_flavor + '-' + version + '-' + ARCH }} --noheading --format 'table {{{{ .Tag }}'))
     for tag in "${TAGS[@]}"; do
         for i in {1..5}; do
-            {{ podman }} push {{ if env('COSIGN_PRIVATE_KEY', '') != '' { '--sign-by-sigstore=/etc/ublue-os-param-file.yaml' } else { '' } }} "{{ 'localhost' / akmods_name + ':' + kernel_flavor + '-' + version + '-' + arch() }}" "{{ transport + registry / _org / akmods_name }}:$tag" && break || sleep $((5 * i));
+            {{ podman }} push {{ if env('COSIGN_PRIVATE_KEY', '') != '' { '--sign-by-sigstore=/etc/ublue-os-param-file.yaml' } else { '' } }} "{{ 'localhost' / akmods_name + ':' + kernel_flavor + '-' + version + '-' + ARCH }}" "{{ transport + registry / _org / akmods_name }}:$tag" && break || sleep $((5 * i));
             if [[ $i -eq '5' ]]; then
                 exit 1
             fi

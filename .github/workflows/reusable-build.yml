@@ -60,7 +60,7 @@ concurrency:
 jobs:
   build-akmods:
     name: Build ${{ matrix.architecture }}
-    runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    runs-on: ${{ (matrix.architecture == 'x86_64' || matrix.architecture == 'x86_64-v2') && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     permissions:
       actions: read
       contents: read
@@ -120,16 +120,16 @@ jobs:
           wc -c certs/private_key_2.priv
 
       - name: Test Image
-        run: just test
+        run: just test ARCH=${{ matrix.architecture }}
         
       - name: Build Image
-        run: just build
+        run: just build ARCH=${{ matrix.architecture }}
 
       - name: Push and Sign Image
         if: contains(fromJson('["schedule", "merge_group"]'), github.event_name) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
         run: |
           just login
-          just push
+          just push ARCH=${{ matrix.architecture }}
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           REGISTRY_ACTOR: ${{ github.actor }}
