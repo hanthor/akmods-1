@@ -39,9 +39,15 @@ desktop-build-group: &desktop-build-group
 images:
   10:
     almalinux:
-      !!merge <<:
-        - *desktop-build-group
+      nvidia:
+        !!merge <<:
+          - *akmods-base
+          - *akmods-nvidia
+          - *arch-all
   "10-kitten":
     almalinux:
-      !!merge <<:
-        - *desktop-build-group
+      nvidia:
+        !!merge <<:
+          - *akmods-base
+          - *akmods-nvidia
+          - *arch-all
