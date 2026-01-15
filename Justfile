@@ -8,7 +8,7 @@ version_cache := shell('mkdir -p $1 && echo $1', BUILDDIR / kernel_flavor + '-' 
 KCWD := shell('mkdir -p $1 && echo $1', version_cache / 'KCWD')
 KCPATH := shell('mkdir -p $1 && echo $1', env('KCPATH', KCWD / 'rpms'))
 version_json := KCPATH / 'cache.json'
-builder := if kernel_flavor =~ 'centos' { 'quay.io/centos/centos:' + version } else { 'quay.io/fedora/fedora:' + version }
+builder := if kernel_flavor =~ 'centos' { 'quay.io/centos/centos:' + version } else if kernel_flavor =~ 'almalinux' { 'quay.io/almalinuxorg:' + version } else { 'quay.io/fedora/fedora:' + version }
 
 
 # Inputs
@@ -55,7 +55,7 @@ clean:
 get-kernel-version:
     #!/usr/bin/env bash
     set "${CI:+-x}" -euo pipefail
-    if [[ {{ kernel_flavor }} =~ centos|longterm ]]; then
+    if [[ {{ kernel_flavor }} =~ centos|longterm|almalinux ]]; then
         {{ podman }} pull --retry 3 "{{ builder }}" >&2
         builder=$({{ podman }} run --entrypoint /bin/bash -dt "{{ builder }}")
         dnf="{{ podman }} exec -t $builder dnf"
@@ -210,6 +210,10 @@ get-kernel-version:
         "main")
             base_image_name="base-atomic"
             linux=$(skopeo inspect docker://quay.io/fedora-ostree-desktops/$base_image_name:{{ version }} --format '{{{{ index .Labels "ostree.linux" }}')
+            ;;
+        "almalinux")
+            $dnf makecache >&2
+            linux=$($dnf repoquery --whatprovides kernel | sort -V | tail -n1 | sed 's/.*://')
             ;;
         *)
             echo "unexpected kernel_flavor '{{ kernel_flavor }}' for query" >&2
