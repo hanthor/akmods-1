@@ -2,7 +2,7 @@
 
 set "${CI:+-x}" -euo pipefail
 
-KERNEL="$(rpm -q "${KERNEL_NAME}" --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
+KERNEL="$(rpm -q "${KERNEL_NAME}" --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' 2>/dev/null || rpm -q kernel-core --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
 # allow pinning to a specific release series (eg, 2.0.x or 2.1.x)
 ZFS_MINOR_VERSION="${ZFS_MINOR_VERSION:-}"
 
@@ -16,7 +16,7 @@ echo "ZFS_VERSION==$ZFS_VERSION"
 
 
 ### zfs specific build deps
-dnf install -y libtirpc-devel libblkid-devel libuuid-devel libudev-devel openssl-devel libaio-devel libattr-devel elfutils-libelf-devel python3-devel libffi-devel libcurl-devel ncompress python3-setuptools
+dnf install -y libtirpc-devel libblkid-devel libuuid-devel libudev-devel openssl-devel libaio-devel libattr-devel elfutils-libelf-devel python3-devel libffi-devel libcurl-devel ncompress python3-setuptools pam-devel libunwind-devel
 
 
 ### BUILD zfs
