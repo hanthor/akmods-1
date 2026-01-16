@@ -24,11 +24,20 @@ akmods-nvidia: &akmods-nvidia
   name: akmods-nvidia
   description: "A caching layer for the pre-built nvidia akmod RPMs"
 
+akmods-zfs: &akmods-zfs
+  name: akmods-zfs
+  description: "A caching layer for the pre-built zfs akmod RPMs"
+
 desktop-build-group: &desktop-build-group
   nvidia:
     !!merge <<:
       - *akmods-base
       - *akmods-nvidia
+      - *arch-all
+  zfs:
+    !!merge <<:
+      - *akmods-base
+      - *akmods-zfs
       - *arch-all
   common:
     !!merge <<:
@@ -44,10 +53,10 @@ images:
           - *akmods-base
           - *akmods-nvidia
           - *arch-all
-      common:
+      zfs:
         !!merge <<:
           - *akmods-base
-          - *akmods-common
+          - *akmods-zfs
           - *arch-all
   "10-kitten":
     almalinux:
@@ -56,8 +65,8 @@ images:
           - *akmods-base
           - *akmods-nvidia
           - *arch-all
-      common:
+      zfs:
         !!merge <<:
           - *akmods-base
-          - *akmods-common
+          - *akmods-zfs
           - *arch-all
