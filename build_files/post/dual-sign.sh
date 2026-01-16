@@ -7,6 +7,12 @@ if [[ "${DUAL_SIGN}" != "true" ]]; then
     exit 0
 fi
 
+# AlmaLinux uses pre-built packages that don't require dual-signing
+if [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]]; then
+    echo "AlmaLinux uses pre-built packages, skipping dual-signing..."
+    exit 0
+fi
+
 KERNEL="$(rpm -q "${KERNEL_NAME}" --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
 SIGNING_KEY_1="/tmp/certs/signing_key_1.pem"
 SIGNING_KEY_2="/tmp/certs/signing_key_2.pem"
