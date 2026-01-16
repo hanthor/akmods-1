@@ -47,23 +47,22 @@ COMMON_SPEC="/root/rpmbuild/SPECS/framework-laptop-kmod-common.spec"
 if [ -f "$COMMON_SPEC" ]; then
     echo "Building framework-laptop-kmod-common package..."
     rpmbuild -bb "$COMMON_SPEC"
-    COMMON_RPM=$(find /root/rpmbuild/RPMS -name "framework-laptop-kmod-common-*.rpm" -type f | head -n1)
-    if [ -n "$COMMON_RPM" ]; then
-        dnf install -y "$COMMON_RPM"
-    fi
 fi
 
 # Build akmod package from spec
 rpmbuild -bb "$SPEC_FILE"
 
-# Install generated akmod package(s) - may be in noarch or arch-specific dir
+# Install both common and akmod packages together to satisfy dependencies
+COMMON_RPM=$(find /root/rpmbuild/RPMS -name "framework-laptop-kmod-common-*.rpm" -type f | head -n1)
 AKMOD_RPM=$(find /root/rpmbuild/RPMS -name "akmod-framework-laptop-*.rpm" -type f | head -n1)
+
 if [ -z "$AKMOD_RPM" ]; then
     echo "ERROR: akmod-framework-laptop RPM not found in /root/rpmbuild/RPMS/"
     find /root/rpmbuild/RPMS -type f -name "*.rpm" || true
     exit 1
 fi
-dnf install -y "$AKMOD_RPM"
+
+dnf install -y $COMMON_RPM "$AKMOD_RPM"
 
 akmods --force --kernels "${KERNEL}" --kmod framework-laptop
 modinfo /usr/lib/modules/"${KERNEL}"/extra/framework-laptop/framework_laptop.ko.xz > /dev/null \
