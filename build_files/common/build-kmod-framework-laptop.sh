@@ -43,8 +43,14 @@ fi
 # Build akmod package from spec
 rpmbuild -bb "$SPEC_FILE"
 
-# Install generated akmod package(s)
-dnf install -y /root/rpmbuild/RPMS/noarch/akmod-framework-laptop-*.rpm
+# Install generated akmod package(s) - may be in noarch or arch-specific dir
+AKMOD_RPM=$(find /root/rpmbuild/RPMS -name "akmod-framework-laptop-*.rpm" -type f | head -n1)
+if [ -z "$AKMOD_RPM" ]; then
+    echo "ERROR: akmod-framework-laptop RPM not found in /root/rpmbuild/RPMS/"
+    find /root/rpmbuild/RPMS -type f -name "*.rpm" || true
+    exit 1
+fi
+dnf install -y "$AKMOD_RPM"
 
 akmods --force --kernels "${KERNEL}" --kmod framework-laptop
 modinfo /usr/lib/modules/"${KERNEL}"/extra/framework-laptop/framework_laptop.ko.xz > /dev/null \
