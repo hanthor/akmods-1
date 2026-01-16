@@ -102,7 +102,7 @@ jobs:
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ${{ steps.gh-workspace.outputs.GITHUB_WORKSPACE }}/build/${{ env.AKMODS_KERNEL }}-${{ env.AKMODS_VERSION }}/KCWD/rpms
-          key: ${{ env.KCKEY }}-${{ matrix.architecture }}
+          key: ${{ env.KCKEY }}-${{ matrix.architecture }}-r1
 
       - name: Fail Absent Kernel Cache
         if: steps.cache-kernel.outputs.cache-hit != 'true'
@@ -166,9 +166,9 @@ jobs:
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ${{ steps.gh-workspace.outputs.GITHUB_WORKSPACE }}/build/${{ env.AKMODS_KERNEL }}-${{ env.AKMODS_VERSION }}/KCWD/rpms
-          key: ${{ env.KCKEY }}-x86_64
+          key: ${{ env.KCKEY }}-x86_64-r1
           restore-keys: |
-            ${{ env.KCKEY }}-aarch64
+            ${{ env.KCKEY }}-aarch64-r1
 
       - name: Generate Manifest
         if: contains(fromJson('["schedule", "workflow_dispatch", "merge_group"]'), github.event_name)
