@@ -3,12 +3,17 @@
 set "${CI:+-x}" -euo pipefail
 
 # Ensure packages get copied to /var/cache/rpms
-pushd /root/rpmbuild/RPMS/"$(uname -m)"
-mapfile -t RPMS < <(find /root/rpmbuild/RPMS/"$(uname -m)"/ -type f -name \*.rpm)
-for RPM in "${RPMS[@]}"; do
-    cp "${RPM}" /var/cache/rpms/kmods/
-done
-popd
+RPM_DIR="/root/rpmbuild/RPMS/$(uname -m)"
+if [[ -d "${RPM_DIR}" ]]; then
+    pushd "${RPM_DIR}"
+    mapfile -t RPMS < <(find "${RPM_DIR}/" -type f -name \*.rpm)
+    for RPM in "${RPMS[@]}"; do
+        cp "${RPM}" /var/cache/rpms/kmods/
+    done
+    popd
+else
+    echo "No RPM directory found at ${RPM_DIR}, skipping kmod copy..."
+fi
 
 # Remove kernel version from kmod package names
 # FIXME: The sed is a gross hack, maybe PR upstream?
