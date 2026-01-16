@@ -29,7 +29,7 @@ Test akmods builds locally before pushing to CI.
 Options:
     -k, --kernel KERNEL    Kernel flavor (default: almalinux)
     -v, --version VERSION  Version (default: 10)
-    -t, --target TARGET    Build target: common, zfs, nvidia (default: common)
+    -t, --target TARGET    Build target: common, zfs (default: common)
     -c, --clean           Clean Podman cache before building
     -h, --help            Show this help
 

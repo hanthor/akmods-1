@@ -15,7 +15,7 @@ builder := if kernel_flavor =~ 'centos' { 'quay.io/centos/centos:' + version } e
 
 kernel_flavor := env('AKMODS_KERNEL', shell('yq ".defaults.kernel_flavor" images.yaml'))
 version := env('AKMODS_VERSION', if kernel_flavor =~ 'centos' { '10' } else { shell('yq ".defaults.version" images.yaml') })
-akmods_target := env('AKMODS_TARGET', if kernel_flavor =~ '(centos|longterm)' { 'zfs' } else { shell('yq ".defaults.akmods_target" images.yaml') })
+akmods_target := env('AKMODS_TARGET', if kernel_flavor =~ '(centos|longterm)' { 'zfs' } else { 'common' })
 ARCH := arch()
 
 # Kernel Pin for coreos-stable (Maximum Version Cap)
@@ -320,11 +320,7 @@ build: (cache-kernel-version) (fetch-kernel)
         "--cpp-flag=-D{{ replace_regex(uppercase(akmods_target), '-.*', '') }}"
         "--cpp-flag=-D{{ replace_regex(uppercase(kernel_flavor), '-.*', '') }}"
     )
-    if [[ "{{ akmods_target }}" =~ nvidia ]]; then
-        CPP_FLAGS+=(
-            "--cpp-flag=-DKMOD_REPO_ARG=KMOD_REPO={{ if akmods_target =~ 'lts' { "nvidia-lts" } else { 'nvidia' } }}"
-        )
-    fi
+    # Removed NVIDIA specific CPP_FLAGS
     LABELS=(
         "--label" "io.artifacthub.package.deprecated=false"
         "--label" "io.artifacthub.package.keywords=bootc,fedora,bluefin,centos,cayo,aurora,ublue,universal-blue"
@@ -370,11 +366,7 @@ test: (cache-kernel-version) (fetch-kernel)
         "--cpp-flag=-D{{ replace_regex(uppercase(akmods_target), '-.*', '') }}"
         "--cpp-flag=-D{{ replace_regex(uppercase(kernel_flavor), '-.*', '') }}"
     )
-    if [[ "{{ akmods_target }}" =~ nvidia ]]; then
-        CPP_FLAGS+=(
-            "--cpp-flag=-DKMOD_REPO_ARG=KMOD_REPO={{ if akmods_target =~ 'lts' { "nvidia-lts" } else { 'nvidia' } }}"
-        )
-    fi
+    # Removed NVIDIA specific CPP_FLAGS
 
 
     PLATFORM_FLAG=()

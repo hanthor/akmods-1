@@ -20,20 +20,11 @@ akmods-common: &akmods-common
   name: akmods
   description: "A caching layer for pre-built akmod RPMs"
 
-akmods-nvidia: &akmods-nvidia
-  name: akmods-nvidia
-  description: "A caching layer for the pre-built nvidia akmod RPMs"
-
 akmods-zfs: &akmods-zfs
   name: akmods-zfs
   description: "A caching layer for the pre-built zfs akmod RPMs"
 
 desktop-build-group: &desktop-build-group
-  nvidia:
-    !!merge <<:
-      - *akmods-base
-      - *akmods-nvidia
-      - *arch-all
   zfs:
     !!merge <<:
       - *akmods-base
