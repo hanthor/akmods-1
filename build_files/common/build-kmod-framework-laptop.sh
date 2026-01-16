@@ -21,15 +21,17 @@ fi
 echo "DEBUG: Final KERNEL_NAME='${KERNEL_NAME}'"
 KERNEL="$(rpm -q "${KERNEL_NAME}" --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
 echo "DEBUG: Resolved KERNEL='${KERNEL}'"
-if [[ -n "$(rpm -E '%fedora' | grep -v %fedora)" ]]; then
-    RELEASE="$(rpm -E '%fedora')"
-    SUFFIX="fc${RELEASE}"
-elif [[ -n "$(rpm -E '%rhel' | grep -v %rhel)" ]]; then
-    RELEASE="$(rpm -E '%rhel')"
-    SUFFIX="el${RELEASE}"
+# Check if this kernel provides the necessary ChromeOS EC symbols
+# (Missing in official RHEL/AlmaLinux kernels, requires custom/Plus kernel)
+KERNEL_DEVEL_DIR="/usr/src/kernels/${KERNEL}"
+if [ -f "${KERNEL_DEVEL_DIR}/Module.symvers" ]; then
+    if ! grep -q "cros_ec_cmd" "${KERNEL_DEVEL_DIR}/Module.symvers"; then
+        echo "Skipping framework-laptop: kernel headers do not provide cros_ec_cmd"
+        echo "This driver requires a kernel with CONFIG_CROS_EC enabled."
+        exit 0
+    fi
 else
-    echo "Unknown distro release, skipping framework-laptop"
-    exit 0
+    echo "Warning: ${KERNEL_DEVEL_DIR}/Module.symvers not found, attempting build anyway..."
 fi
 
 cp /tmp/ublue-os-akmods-addons/rpmbuild/SOURCES/_copr_ublue-os-akmods.repo /etc/yum.repos.d/
