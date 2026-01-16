@@ -2,7 +2,7 @@
 defaults:
   kernel_flavor: almalinux
   version: 10
-  akmods_target: nvidia
+  akmods_target: common
 
 arch-all: &arch-all
   architecture:
@@ -48,10 +48,10 @@ desktop-build-group: &desktop-build-group
 images:
   10:
     almalinux:
-      nvidia:
+      common:
         !!merge <<:
           - *akmods-base
-          - *akmods-nvidia
+          - *akmods-common
           - *arch-all
       zfs:
         !!merge <<:
@@ -60,10 +60,10 @@ images:
           - *arch-all
   "10-kitten":
     almalinux:
-      nvidia:
+      common:
         !!merge <<:
           - *akmods-base
-          - *akmods-nvidia
+          - *akmods-common
           - *arch-all
       zfs:
         !!merge <<:

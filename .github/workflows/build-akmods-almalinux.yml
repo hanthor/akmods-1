@@ -13,7 +13,7 @@ on:
     paths-ignore:
       - '**.md'
   schedule:
-    - cron: '22 0 * * *'  # 0022 UTC everyday
+    - cron: '15 0 * * *'  # 0015 UTC everyday
   workflow_dispatch:
 jobs:
   cache_kernel_almalinux_10-kitten:
@@ -28,8 +28,8 @@ jobs:
       architecture: '["aarch64","x86_64","x86_64-v2"]'
       kernel_flavor: almalinux
       version: 10-kitten
-  build-almalinux_10-kitten_nvidia:
-    name: Build nvidia almalinux (10-kitten)
+  build-almalinux_10-kitten_common:
+    name: Build common almalinux (10-kitten)
     uses: ./.github/workflows/reusable-build.yml
     secrets: inherit
     permissions:
@@ -38,7 +38,7 @@ jobs:
       packages: write
     needs: cache_kernel_almalinux_10-kitten
     with:
-      akmods_target: nvidia
+      akmods_target: common
       architecture: '["aarch64","x86_64","x86_64-v2"]'
       kernel_cache_key: ${{ needs.cache_kernel_almalinux_10-kitten.outputs.KCKEY }}
       kernel_flavor: almalinux
@@ -63,7 +63,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    needs: [build-almalinux_10-kitten_nvidia,build-almalinux_10-kitten_zfs]
+    needs: [build-almalinux_10-kitten_common,build-almalinux_10-kitten_zfs]
     runs-on: ubuntu-24.04
     if: always()
     steps:
@@ -85,8 +85,8 @@ jobs:
       architecture: '["aarch64","x86_64","x86_64-v2"]'
       kernel_flavor: almalinux
       version: 10
-  build-almalinux_10_nvidia:
-    name: Build nvidia almalinux (10)
+  build-almalinux_10_common:
+    name: Build common almalinux (10)
     uses: ./.github/workflows/reusable-build.yml
     secrets: inherit
     permissions:
@@ -95,7 +95,7 @@ jobs:
       packages: write
     needs: cache_kernel_almalinux_10
     with:
-      akmods_target: nvidia
+      akmods_target: common
       architecture: '["aarch64","x86_64","x86_64-v2"]'
       kernel_cache_key: ${{ needs.cache_kernel_almalinux_10.outputs.KCKEY }}
       kernel_flavor: almalinux
@@ -120,7 +120,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    needs: [build-almalinux_10_nvidia,build-almalinux_10_zfs]
+    needs: [build-almalinux_10_common,build-almalinux_10_zfs]
     runs-on: ubuntu-24.04
     if: always()
     steps:
