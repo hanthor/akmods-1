@@ -351,7 +351,7 @@ build: (cache-kernel-version) (fetch-kernel)
         PLATFORM_FLAG+=("--platform" "linux/amd64/v2")
     fi
 
-    {{ podman }} build -f Containerfile.in --volume {{ KCPATH }}:/tmp/kernel_cache:ro "${CPP_FLAGS[@]}" "${LABELS[@]}" "${TAGS[@]}" "${PLATFORM_FLAG[@]}" --target RPMS {{ justfile_dir () }}
+    {{ podman }} build -f Containerfile.in --volume {{ KCPATH }}:/tmp/kernel_cache:ro,z "${CPP_FLAGS[@]}" "${LABELS[@]}" "${TAGS[@]}" "${PLATFORM_FLAG[@]}" --target RPMS {{ justfile_dir () }}
 
 # Test Cached Akmod RPMs
 [group('Build')]

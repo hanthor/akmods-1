@@ -40,8 +40,14 @@ fi
 echo "Installing ${KERNEL_FLAVOR} kernel-cache RPMs..."
 
 # build image has no kernel so this needs nothing fancy, just install, but not UKIs
-#shellcheck disable=SC2046 #we want word splitting
-dnf install -y --allowerasing --setopt=install_weak_deps=False "${PREP_RPMS[@]}" $(find /tmp/kernel_cache/*.rpm -type f | grep "$(uname -m)" | grep -v uki | xargs)
+ls -lh /tmp/kernel_cache/
+KERNEL_RPMS=$(find /tmp/kernel_cache -name "*.rpm" -type f | grep "$(uname -m)" | grep -v uki | tr '\n' ' ')
+echo "DEBUG: KERNEL_RPMS_LIST: ${KERNEL_RPMS}"
+if [[ -z "${KERNEL_RPMS}" ]]; then
+    echo "ERROR: No kernel RPMs found in cache!"
+    exit 1
+fi
+dnf install -y --allowerasing --setopt=install_weak_deps=False "${PREP_RPMS[@]}" ${KERNEL_RPMS}
 
 # after F44 launches, bump to 45
 # Parse VERSION to get numeric part for comparison (handles "10-kitten" -> "10")
@@ -95,6 +101,11 @@ if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" 
         libtool
         ncompress
         python-cffi
+        rpmdevtools
+        gcc-c++
+        mock
+        akmods
+        kmodtool
     )
 fi
 if [[ "${KERNEL_FLAVOR}" =~ "coreos" ]] || [[ "${KERNEL_FLAVOR}" =~ "longterm" ]]; then

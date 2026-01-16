@@ -152,7 +152,9 @@ elif [[ -f $(find /tmp/akmods-rpms/kmods/zfs/kmod-*.rpm 2> /dev/null) ]]; then
         /tmp/akmods-rpms/kmods/zfs/*.rpm
     )
 else
-    KMODS_TO_INSTALL+=(/tmp/akmods-rpms/kmods/*.rpm)
+    # For common akmods, only install kmod-* packages (pre-built modules)
+    # akmod-* packages require *-kmod-common subpackages that aren't built
+    KMODS_TO_INSTALL+=($(find /tmp/akmods-rpms/kmods/ -name "kmod-*.rpm" -type f))
 fi
 
 dnf install -y --setopt=install_weak_deps=False "${KMODS_TO_INSTALL[@]}"

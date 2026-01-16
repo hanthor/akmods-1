@@ -5,6 +5,12 @@ set "${CI:+-x}" -euo pipefail
 #shellcheck disable=SC1091
 source /tmp/info.sh
 
+if ! rpm -q "${KERNEL_NAME}" &>/dev/null; then
+    # Fallback to kernel-core if the metapackage is missing (common on AlmaLinux/CentOS)
+    if rpm -q kernel-core &>/dev/null; then
+        KERNEL_NAME="kernel-core"
+    fi
+fi
 KERNEL="$(rpm -q "${KERNEL_NAME}" --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
 PUBLIC_CHAIN="/tmp/certs/public_key_chain.pem"
 

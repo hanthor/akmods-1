@@ -70,16 +70,21 @@ ARG ZFS_MINOR_VERSION="2.3"
 # common akmods
 # */
 COPY build_files/common /tmp/
+COPY build_files/common/prepare-packaging.sh /tmp/
+COPY rpmbuild /root/rpmbuild
+RUN chmod +x /tmp/prepare-packaging.sh
 RUN --mount=type=cache,dst=/var/cache/dnf \
     --mount=type=cache,dst=/var/cache/libdnf5 \
     bash <<'RUNEOF'
 set "${CI+-x}" -euo pipefail
+/tmp/prepare-packaging.sh
 /tmp/build-ublue-os-akmods-addons.sh
 cp /tmp/ublue-os-akmods-addons/rpmbuild/RPMS/noarch/ublue-os-akmods-addons*.rpm /var/cache/rpms/ublue-os/
 RUNEOF
 RUN --mount=type=cache,dst=/var/cache/dnf \
     --mount=type=cache,dst=/var/cache/libdnf5 \
     bash <<'RUNEOF'
+set "${CI+-x}" -euo pipefail
 /tmp/build-kmod-framework-laptop.sh
 /tmp/build-kmod-openrazer.sh
 /tmp/build-kmod-v4l2loopback.sh
