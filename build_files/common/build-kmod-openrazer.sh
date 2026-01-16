@@ -28,11 +28,27 @@ if [ ! -f "$SPEC_FILE" ]; then
     exit 0
 fi
 
+# Build the -common package first (required dependency for akmod)
+COMMON_SPEC="/root/rpmbuild/SPECS/openrazer-kmod-common.spec"
+if [ -f "$COMMON_SPEC" ]; then
+    echo "Building openrazer-kmod-common package..."
+    rpmbuild -bb "$COMMON_SPEC" || echo "Warning: openrazer-kmod-common build failed, continuing..."
+    COMMON_RPM=$(find /root/rpmbuild/RPMS -name "openrazer-kmod-common-*.rpm" -type f | head -n1)
+    if [ -n "$COMMON_RPM" ]; then
+        dnf install -y "$COMMON_RPM"
+    fi
+fi
+
 # Build akmod and common packages
 rpmbuild -bb "$SPEC_FILE"
 
-# Install generated packages (akmod and common)
-dnf install -y /root/rpmbuild/RPMS/*/*openrazer*.rpm
+# Install generated packages - find dynamically
+AKMOD_RPM=$(find /root/rpmbuild/RPMS -name "akmod-openrazer-*.rpm" -type f | head -n1)
+if [ -n "$AKMOD_RPM" ]; then
+    dnf install -y "$AKMOD_RPM"
+else
+    echo "Warning: akmod-openrazer RPM not found"
+fi
 
 akmods --force --kernels "${KERNEL}" --kmod openrazer
 modinfo /usr/lib/modules/"${KERNEL}"/extra/openrazer/razerkbd.ko.xz >/dev/null ||

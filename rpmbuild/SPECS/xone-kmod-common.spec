@@ -1,14 +1,14 @@
 %global real_name xone
 
 Name:           %{real_name}-kmod-common
-Version:        1000.{{{ git_dir_version }}}
+Version:        1000.0.0.git
 Release:        1%{?dist}
 Summary:        Linux kernel driver for Xbox One and Xbox Series X|S accessories common files
 License:        GPLv2
 URL:            https://github.com/ublue-os/xonedo
 BuildArch:      noarch
 
-Source:         %{url}/archive/refs/heads/master.tar.gz
+Source:         %{url}/archive/refs/heads/master.tar.gz#/xone-kmod-master.tar.gz
 
 # Windows driver and firmware file:
 Source1:        1cd6a87c-623f-4407-a52d-c31be49e925c_e19f60808bdcbfbd3c3df6be3e71ffc52e43261e.cab
@@ -19,7 +19,6 @@ BuildRequires:  cabextract
 BuildRequires:  systemd-rpm-macros
 
 Requires:       wireless-regdb
-Requires:       %{real_name}-kmod = %{?epoch:%{epoch}:}%{version}
 Provides:       %{real_name}-kmod-common = %{?epoch:%{epoch}:}%{version}
 
 %description
@@ -52,4 +51,5 @@ install -p -m 0644 -D FW_ACC_00U-2.bin %{buildroot}%{_prefix}/lib/firmware/xow_d
 %{_prefix}/lib/firmware/xow_dongle_045e_02e6.bin
 
 %changelog
-{{{ git_dir_changelog }}}
+* Fri Jan 16 2026 Antigravity <antigravity@example.com> - 1000.0.0.git-1
+- Auto-generated build

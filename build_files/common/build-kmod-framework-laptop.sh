@@ -40,6 +40,17 @@ if [ ! -f "$SPEC_FILE" ]; then
     exit 0
 fi
 
+# Build the -common package first (required dependency for akmod)
+COMMON_SPEC="/root/rpmbuild/SPECS/framework-laptop-kmod-common.spec"
+if [ -f "$COMMON_SPEC" ]; then
+    echo "Building framework-laptop-kmod-common package..."
+    rpmbuild -bb "$COMMON_SPEC"
+    COMMON_RPM=$(find /root/rpmbuild/RPMS -name "framework-laptop-kmod-common-*.rpm" -type f | head -n1)
+    if [ -n "$COMMON_RPM" ]; then
+        dnf install -y "$COMMON_RPM"
+    fi
+fi
+
 # Build akmod package from spec
 rpmbuild -bb "$SPEC_FILE"
 

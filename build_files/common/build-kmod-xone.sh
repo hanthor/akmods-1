@@ -28,10 +28,26 @@ if [ ! -f "$SPEC_FILE" ]; then
     exit 0
 fi
 
+# Build the -common package first (required dependency for akmod)
+COMMON_SPEC="/root/rpmbuild/SPECS/xone-kmod-common.spec"
+if [ -f "$COMMON_SPEC" ]; then
+    echo "Building xone-kmod-common package..."
+    rpmbuild -bb "$COMMON_SPEC" || echo "Warning: xone-kmod-common build failed, continuing..."
+    COMMON_RPM=$(find /root/rpmbuild/RPMS -name "xone-kmod-common-*.rpm" -type f | head -n1)
+    if [ -n "$COMMON_RPM" ]; then
+        dnf install -y "$COMMON_RPM"
+    fi
+fi
+
 rpmbuild -bb "$SPEC_FILE"
 
-# Install generated akmod package
-dnf install -y /root/rpmbuild/RPMS/*/*xone*.rpm
+# Install generated akmod package - find them dynamically
+AKMOD_RPM=$(find /root/rpmbuild/RPMS -name "akmod-xone-*.rpm" -type f | head -n1)
+if [ -n "$AKMOD_RPM" ]; then
+    dnf install -y "$AKMOD_RPM"
+else
+    echo "Warning: akmod-xone RPM not found"
+fi
 
 akmods --force --kernels "${KERNEL}" --kmod xone
 modinfo /usr/lib/modules/"${KERNEL}"/extra/xone/xone_{dongle,gip,gip_gamepad,gip_headset,gip_chatpad,gip_madcatz_strat,gip_madcatz_glam,gip_pdp_jaguar}.ko.xz > /dev/null \
