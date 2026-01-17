@@ -11,8 +11,7 @@ The [`akmods` images](https://github.com/orgs/ublue-os/packages?repo_name=akmods
 The akmods packages are divided up for building in a few different "groups":
 
 - `common` - any kmod installed by default in Bluefin/Aurora (or were originally in main images pre-Fedora 39)
-- `nvidia` - only the nvidia proprietary kmod and addons
-- `nvidia-open` - only the nvidia-open kmod and addons
+- `common` - any kmod installed by default in Bluefin/Aurora (or were originally in main images pre-Fedora 39)
 - `zfs` - only the zfs kmod and utilities built for select kernels
 
 Each of these images contains a cached copy of the respective kernel RPMs compatible with the respective kmods for the image.
@@ -35,13 +34,6 @@ The `common` images contain related kmod packages, plus:
 
 - `ublue-os-akmods-addons` - installs extra repos and our kmods signing key; install and import to allow SecureBoot systems to use these kmods
 
-The `nvidia` and `nvidia-open` images contains
-
-- `ublue-os-nvidia-addons` - installs extra repos enabling our nvidia support
-  - [nvidia container selinux policy](https://github.com/NVIDIA/dgx-selinux/tree/master/src/nvidia-container-selinux) - uses RHEL9 policy as the closest match
-  - [nvidia-container-toolkit repo](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-yum-or-dnf) - version 1.14 (and newer) provide CDI for podman use of nvidia gpus
-- `ublue-os-ucore-nvidia` - a slightly lighter `ublue-os-nvidia-addons` for CoreOS/uCore systems
-
 ### Kmod Packages
 
 | Group | Package | Description | Source |
@@ -50,30 +42,12 @@ The `nvidia` and `nvidia-open` images contains
 | common | [openrazer](https://openrazer.github.io/) | kernel module adding additional features to Razer hardware | [![badge](https://copr.fedorainfracloud.org/coprs/ublue-os/akmods/package/openrazer-kmod/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/ublue-os/akmods/package/openrazer-kmod) |
 | common | [v4l2loopback](https://github.com/umlaeute/v4l2loopback) | allows creating "virtual video devices" | [RPMFusion - free](https://rpmfusion.org/) |
 | common | [wl](https://github.com/rpmfusion/broadcom-wl/) | support for some legacy broadcom wifi devices | [RPMFusion - nonfree](https://rpmfusion.org/) |
-| common | [xone](https://github.com/BoukeHaarsma23/xonedo/) | xbox one controller USB wired/RF driver modified to work along-side xpad | [![badge](https://copr.fedorainfracloud.org/coprs/ublue-os/akmods/package/xone-kmod/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/ublue-os/akmods/package/xone-kmod) |
-| nvidia-open | [nvidia](https://negativo17.org/nvidia-driver/) | nvidia-open GPU drivers | [negativo17 - fedora-nvidia](https://negativo17.org/) |
+| common | [xone](https://github.com/BoukeHaarsma23/xonedo/) | xbox one controller USB wired/RF driver modified to work along-side xpad | [![badge](https://copr.fedorainfracloud.org/coprs/ublue-os/akmods/package/framework-laptop-kmod/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/ublue-os/akmods/package/xone-kmod) |
 | zfs | [zfs](https://github.com/openzfs/zfs) | OpenZFS advanced file system and volume manager | [zfs](https://github.com/openzfs/zfs) |
 
 ## Notes
 
-### NVIDIA Hardware Support
-
-We build both the open and closed drivers from NVIDIA. The open driver is the only option for supporting the latest hardware. The closed driver is required for older hardware, but even it doesn't support "legacy" hardware.
-
-`nvidia-open` - newest current and most open driver supports the following hardware:
-
-- GeForce RTX: 50 Series, 40 Series, 30 Series, 20 Series
-- GeForce: 16 Series
-- and more: [NVIDIA Compatible GPUs list](https://github.com/NVIDIA/open-gpu-kernel-modules#compatible-gpus)
-
-`nvidia` - closed proprietary driver supports the following hardware:
-
-- GeForce RTX: 40 Series, 30 Series, 20 Series
-- GeForce: 16 Series, 10 Series, 900 Series, 700 Series
-- NVIDIA Turing: T4, T4G
-- NVIDIA Volta: V100
-- NVIDIA Pascal: Quadro: P2000, P4000, P5000, P6000, GP100; Tesla: P100, P40, P4
-- NVIDIA Maxwell: Quadro: K2200, M2000, M4000, M5000, M6000, M6000 24GB; - - Tesla: M60, M40, M6, M4
+<!-- Removed NVIDIA hardware support notes -->
 
 ## Usage
 
@@ -89,17 +63,7 @@ Using common images as an example, add something like this to your Containerfile
     RUN dnf install /tmp/rpms/ublue-os/ublue-os-akmods*.rpm
     RUN dnf install /tmp/rpms/kmods/kmod-v4l2loopback*.rpm
 
-For NVIDIA images, add something like this to your Containerfile, replacing `TAG` with the appropriate tag for the image:
-
-    COPY --from=ghcr.io/ublue-os/akmods-nvidia:TAG / /tmp/akmods-nvidia
-    RUN find /tmp/akmods-nvidia
-    ## optionally install remove old and install new kernel
-    # dnf -y remove --no-autoremove kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
-    ## install ublue support package and desired kmod(s)
-    RUN dnf install /tmp/rpms/ublue-os/ublue-os-nvidia*.rpm
-    RUN dnf install /tmp/rpms/kmods/kmod-nvidia*.rpm
-  
-*Note* There is an nvidia-install script that most universal-blue images use located with the *main* repo that works for desktop Fedora installs.
+<!-- Removed NVIDIA usage examples -->
 
 ## Verification
 

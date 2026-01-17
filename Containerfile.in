@@ -20,13 +20,9 @@ ARG KMOD_REPO_ARG
 
 COPY certs /tmp/certs
 
-COPY files/usr/lib/systemd/system/ublue-nvctk-cdi.service /tmp/ublue-os-nvidia-addons/rpmbuild/SOURCES/ublue-nvctk-cdi.service
-COPY files/usr/lib/systemd/system/ublue-nvctk-cdi.service /tmp/ublue-os-ucore-nvidia/rpmbuild/SOURCES/ublue-nvctk-cdi.service
-COPY files/usr/lib/systemd/system-preset/70-ublue-nvctk-cdi.preset /tmp/ublue-os-nvidia-addons/rpmbuild/SOURCES/70-ublue-nvctk-cdi.preset
-COPY files/usr/lib/systemd/system-preset/70-ublue-nvctk-cdi.preset /tmp/ublue-os-ucore-nvidia/rpmbuild/SOURCES/70-ublue-nvctk-cdi.preset
-COPY files/etc/udev/rules.d/60-nvidia-extra-devices-pm.rules /tmp/ublue-os-nvidia-addons/rpmbuild/SOURCES/60-nvidia-extra-devices-pm.rules
+# Removed NVIDIA-specific addon files copies
 
-#ifndef CENTOS
+#if !defined(CENTOS) && !defined(ALMALINUX)
 ADD https://copr.fedorainfracloud.org/coprs/ublue-os/akmods/repo/fedora-${VERSION}/ublue-os-akmods-fedora-${VERSION}.repo \
     /tmp/ublue-os-akmods-addons/rpmbuild/SOURCES/_copr_ublue-os-akmods.repo
 ADD https://negativo17.org/repos/fedora-multimedia.repo \
@@ -70,16 +66,21 @@ ARG ZFS_MINOR_VERSION="2.3"
 # common akmods
 # */
 COPY build_files/common /tmp/
+COPY build_files/common/prepare-packaging.sh /tmp/
+COPY rpmbuild /root/rpmbuild
+RUN chmod +x /tmp/prepare-packaging.sh
 RUN --mount=type=cache,dst=/var/cache/dnf \
     --mount=type=cache,dst=/var/cache/libdnf5 \
     bash <<'RUNEOF'
 set "${CI+-x}" -euo pipefail
+/tmp/prepare-packaging.sh
 /tmp/build-ublue-os-akmods-addons.sh
 cp /tmp/ublue-os-akmods-addons/rpmbuild/RPMS/noarch/ublue-os-akmods-addons*.rpm /var/cache/rpms/ublue-os/
 RUNEOF
 RUN --mount=type=cache,dst=/var/cache/dnf \
     --mount=type=cache,dst=/var/cache/libdnf5 \
     bash <<'RUNEOF'
+set "${CI+-x}" -euo pipefail
 /tmp/build-kmod-framework-laptop.sh
 /tmp/build-kmod-openrazer.sh
 /tmp/build-kmod-v4l2loopback.sh
@@ -87,23 +88,7 @@ RUN --mount=type=cache,dst=/var/cache/dnf \
 /tmp/build-kmod-xone.sh
 RUNEOF
 
-#elif defined NVIDIA
-# /*
-# nvidia kmods
-# */
-
-COPY build_files/nvidia /tmp/
-RUN --mount=type=cache,dst=/var/cache/dnf \
-    --mount=type=cache,dst=/var/cache/libdnf5 \
-    bash <<'RUNEOF'
-/tmp/build-ublue-os-nvidia-addons.sh
-cp /tmp/ublue-os-nvidia-addons/rpmbuild/RPMS/noarch/ublue-os-nvidia-addons*.rpm /var/cache/rpms/ublue-os/
-RUNEOF
-RUN --mount=type=cache,dst=/var/cache/dnf \
-    --mount=type=cache,dst=/var/cache/libdnf5 \
-    bash <<'RUNEOF'
-/tmp/build-kmod-nvidia.sh "$KMOD_REPO"
-RUNEOF
+# Removed NVIDIA build stage
 
 #elif defined ZFS
 # /*

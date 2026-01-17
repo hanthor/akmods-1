@@ -7,6 +7,14 @@ if [[ "${DUAL_SIGN}" != "true" ]]; then
     exit 0
 fi
 
+
+
+if ! rpm -q "${KERNEL_NAME}" &>/dev/null; then
+    # Fallback to kernel-core if the metapackage is missing (common on AlmaLinux/CentOS)
+    if rpm -q kernel-core &>/dev/null; then
+        KERNEL_NAME="kernel-core"
+    fi
+fi
 KERNEL="$(rpm -q "${KERNEL_NAME}" --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
 SIGNING_KEY_1="/tmp/certs/signing_key_1.pem"
 SIGNING_KEY_2="/tmp/certs/signing_key_2.pem"

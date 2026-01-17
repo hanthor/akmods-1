@@ -8,14 +8,15 @@ version_cache := shell('mkdir -p $1 && echo $1', BUILDDIR / kernel_flavor + '-' 
 KCWD := shell('mkdir -p $1 && echo $1', version_cache / 'KCWD')
 KCPATH := shell('mkdir -p $1 && echo $1', env('KCPATH', KCWD / 'rpms'))
 version_json := KCPATH / 'cache.json'
-builder := if kernel_flavor =~ 'centos' { 'quay.io/centos/centos:' + version } else { 'quay.io/fedora/fedora:' + version }
+builder := if kernel_flavor =~ 'centos' { 'quay.io/centos/centos:' + version } else if kernel_flavor =~ 'almalinux' { 'quay.io/almalinuxorg/almalinux:' + version } else { 'quay.io/fedora/fedora:' + version }
 
 
 # Inputs
 
 kernel_flavor := env('AKMODS_KERNEL', shell('yq ".defaults.kernel_flavor" images.yaml'))
 version := env('AKMODS_VERSION', if kernel_flavor =~ 'centos' { '10' } else { shell('yq ".defaults.version" images.yaml') })
-akmods_target := env('AKMODS_TARGET', if kernel_flavor =~ '(centos|longterm)' { 'zfs' } else { shell('yq ".defaults.akmods_target" images.yaml') })
+akmods_target := env('AKMODS_TARGET', if kernel_flavor =~ '(centos|longterm)' { 'zfs' } else { 'common' })
+ARCH := arch()
 
 # Kernel Pin for coreos-stable (Maximum Version Cap)
 # Set to a specific kernel version (e.g., '6.17.12') to cap coreos-stable builds
@@ -55,11 +56,15 @@ clean:
 get-kernel-version:
     #!/usr/bin/env bash
     set "${CI:+-x}" -euo pipefail
-    if [[ {{ kernel_flavor }} =~ centos|longterm ]]; then
+    if [[ {{ kernel_flavor }} =~ centos|longterm|almalinux ]]; then
         {{ podman }} pull --retry 3 "{{ builder }}" >&2
         builder=$({{ podman }} run --entrypoint /bin/bash -dt "{{ builder }}")
         dnf="{{ podman }} exec -t $builder dnf"
         $dnf install -y --setopt=install_weak_deps=False dnf-plugins-core >&2
+        if [[ {{ kernel_flavor }} =~ almalinux ]]; then
+             $dnf install -y epel-release >&2
+             $dnf config-manager --set-enabled crb >&2
+        fi
         trap '{{ podman }} rm -f -t 0 $builder &>/dev/null' EXIT SIGTERM
     fi
 
@@ -211,6 +216,10 @@ get-kernel-version:
             base_image_name="base-atomic"
             linux=$(skopeo inspect docker://quay.io/fedora-ostree-desktops/$base_image_name:{{ version }} --format '{{{{ index .Labels "ostree.linux" }}')
             ;;
+        "almalinux")
+            $dnf makecache >&2
+            linux=$($dnf repoquery --whatprovides kernel | sort -V | tail -n1 | sed 's/.*://')
+            ;;
         *)
             echo "unexpected kernel_flavor '{{ kernel_flavor }}' for query" >&2
             exit 1
@@ -311,11 +320,7 @@ build: (cache-kernel-version) (fetch-kernel)
         "--cpp-flag=-D{{ replace_regex(uppercase(akmods_target), '-.*', '') }}"
         "--cpp-flag=-D{{ replace_regex(uppercase(kernel_flavor), '-.*', '') }}"
     )
-    if [[ "{{ akmods_target }}" =~ nvidia ]]; then
-        CPP_FLAGS+=(
-            "--cpp-flag=-DKMOD_REPO_ARG=KMOD_REPO={{ if akmods_target =~ 'lts' { "nvidia-lts" } else { 'nvidia' } }}"
-        )
-    fi
+    # Removed NVIDIA specific CPP_FLAGS
     LABELS=(
         "--label" "io.artifacthub.package.deprecated=false"
         "--label" "io.artifacthub.package.keywords=bootc,fedora,bluefin,centos,cayo,aurora,ublue,universal-blue"
@@ -333,11 +338,16 @@ build: (cache-kernel-version) (fetch-kernel)
         "--label" "ostree.linux={{ shell("jq -r '.kernel_release' < $1", version_json) }}"
     )
     TAGS=(
-        "--tag" "{{ akmods_name + ':' + kernel_flavor + '-' + version + '-' + arch() }}"
+        "--tag" "{{ akmods_name + ':' + kernel_flavor + '-' + version + '-' + ARCH }}"
         "--tag" "{{ akmods_name + ':' + kernel_flavor + '-' + version + '-' + shell("jq -r '.kernel_release' < $1", version_json) }}"
     )
 
-    {{ podman }} build -f Containerfile.in --volume {{ KCPATH }}:/tmp/kernel_cache:ro "${CPP_FLAGS[@]}" "${LABELS[@]}" "${TAGS[@]}" --target RPMS {{ justfile_dir () }}
+    PLATFORM_FLAG=()
+    if [[ "{{ ARCH }}" == "x86_64-v2" ]]; then
+        PLATFORM_FLAG+=("--platform" "linux/amd64/v2")
+    fi
+
+    {{ podman }} build -f Containerfile.in --volume {{ KCPATH }}:/tmp/kernel_cache:ro,z "${CPP_FLAGS[@]}" "${LABELS[@]}" "${TAGS[@]}" "${PLATFORM_FLAG[@]}" --target RPMS {{ justfile_dir () }}
 
 # Test Cached Akmod RPMs
 [group('Build')]
@@ -356,13 +366,15 @@ test: (cache-kernel-version) (fetch-kernel)
         "--cpp-flag=-D{{ replace_regex(uppercase(akmods_target), '-.*', '') }}"
         "--cpp-flag=-D{{ replace_regex(uppercase(kernel_flavor), '-.*', '') }}"
     )
-    if [[ "{{ akmods_target }}" =~ nvidia ]]; then
-        CPP_FLAGS+=(
-            "--cpp-flag=-DKMOD_REPO_ARG=KMOD_REPO={{ if akmods_target =~ 'lts' { "nvidia-lts" } else { 'nvidia' } }}"
-        )
+    # Removed NVIDIA specific CPP_FLAGS
+
+
+    PLATFORM_FLAG=()
+    if [[ "{{ ARCH }}" == "x86_64-v2" ]]; then
+        PLATFORM_FLAG+=("--platform" "linux/amd64/v2")
     fi
 
-    {{ podman }} build -f Containerfile.in --volume {{ KCPATH }}:/tmp/kernel_cache:ro "${CPP_FLAGS[@]}" --target test --tag akmods-test:latest {{ justfile_dir () }}
+    {{ podman }} build -f Containerfile.in --volume {{ KCPATH }}:/tmp/kernel_cache:ro "${CPP_FLAGS[@]}" "${PLATFORM_FLAG[@]}" --target test --tag akmods-test:latest {{ justfile_dir () }}
     if ! podman run --rm akmods-test:latest; then
         echo "Signatures Failed" >&2
         exit 1
@@ -382,10 +394,10 @@ push:
 
     set ${CI:+-x} -eou pipefail
 
-    declare -a TAGS=($({{ podman }} image list {{ 'localhost' / akmods_name + ':' + kernel_flavor + '-' + version + '-' + arch() }} --noheading --format 'table {{{{ .Tag }}'))
+    declare -a TAGS=($({{ podman }} image list {{ 'localhost' / akmods_name + ':' + kernel_flavor + '-' + version + '-' + ARCH }} --noheading --format 'table {{{{ .Tag }}'))
     for tag in "${TAGS[@]}"; do
         for i in {1..5}; do
-            {{ podman }} push {{ if env('COSIGN_PRIVATE_KEY', '') != '' { '--sign-by-sigstore=/etc/ublue-os-param-file.yaml' } else { '' } }} "{{ 'localhost' / akmods_name + ':' + kernel_flavor + '-' + version + '-' + arch() }}" "{{ transport + registry / _org / akmods_name }}:$tag" && break || sleep $((5 * i));
+            {{ podman }} push {{ if env('COSIGN_PRIVATE_KEY', '') != '' { '--sign-by-sigstore=/etc/ublue-os-param-file.yaml' } else { '' } }} "{{ 'localhost' / akmods_name + ':' + kernel_flavor + '-' + version + '-' + ARCH }}" "{{ transport + registry / _org / akmods_name }}:$tag" && break || sleep $((5 * i));
             if [[ $i -eq '5' ]]; then
                 exit 1
             fi

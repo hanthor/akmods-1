@@ -46,7 +46,7 @@ concurrency:
 jobs:
   cache-kernel:
     name: Cache ${{ matrix.architecture }}
-    runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    runs-on: ${{ (matrix.architecture == 'x86_64' || matrix.architecture == 'x86_64-v2') && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     outputs:
       KCKEY: ${{ inputs.kernel_flavor }}-${{ steps.kernel-version.outputs.kernel_major_minor_patch }}
     container:
@@ -80,7 +80,7 @@ jobs:
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5
         with:
           path: ${{ steps.kernel-version.outputs.KCPATH }}
-          key: ${{ inputs.kernel_flavor }}-${{ steps.kernel-version.outputs.kernel_major_minor_patch }}-${{ matrix.architecture }} # job outputs KCKEY
+          key: ${{ inputs.kernel_flavor }}-${{ steps.kernel-version.outputs.kernel_major_minor_patch }}-${{ matrix.architecture }}-r1 # job outputs KCKEY
 
       - name: Retrieve Signing Key
         if: contains(fromJSON('["schedule", "workflow_dispatch", "merge_group"]'), github.event_name) && steps.cache-kernel.outputs.cache-hit != 'true'

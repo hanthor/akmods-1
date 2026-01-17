@@ -60,7 +60,7 @@ concurrency:
 jobs:
   build-akmods:
     name: Build ${{ matrix.architecture }}
-    runs-on: ${{ matrix.architecture == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    runs-on: ${{ (matrix.architecture == 'x86_64' || matrix.architecture == 'x86_64-v2') && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     permissions:
       actions: read
       contents: read
@@ -102,7 +102,7 @@ jobs:
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ${{ steps.gh-workspace.outputs.GITHUB_WORKSPACE }}/build/${{ env.AKMODS_KERNEL }}-${{ env.AKMODS_VERSION }}/KCWD/rpms
-          key: ${{ env.KCKEY }}-${{ matrix.architecture }}
+          key: ${{ env.KCKEY }}-${{ matrix.architecture }}-r1
 
       - name: Fail Absent Kernel Cache
         if: steps.cache-kernel.outputs.cache-hit != 'true'
@@ -120,16 +120,16 @@ jobs:
           wc -c certs/private_key_2.priv
 
       - name: Test Image
-        run: just test
+        run: just ARCH=${{ matrix.architecture }} test
         
       - name: Build Image
-        run: just build
+        run: just ARCH=${{ matrix.architecture }} build
 
       - name: Push and Sign Image
         if: contains(fromJson('["schedule", "merge_group"]'), github.event_name) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
         run: |
           just login
-          just push
+          just ARCH=${{ matrix.architecture }} push
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           REGISTRY_ACTOR: ${{ github.actor }}
@@ -166,9 +166,9 @@ jobs:
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
         with:
           path: ${{ steps.gh-workspace.outputs.GITHUB_WORKSPACE }}/build/${{ env.AKMODS_KERNEL }}-${{ env.AKMODS_VERSION }}/KCWD/rpms
-          key: ${{ env.KCKEY }}-x86_64
+          key: ${{ env.KCKEY }}-x86_64-r1
           restore-keys: |
-            ${{ env.KCKEY }}-aarch64
+            ${{ env.KCKEY }}-aarch64-r1
 
       - name: Generate Manifest
         if: contains(fromJson('["schedule", "workflow_dispatch", "merge_group"]'), github.event_name)

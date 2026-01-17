@@ -5,13 +5,14 @@ set "${CI:+-x}" -euo pipefail
 ### PREPARE REPOS
 # enable RPMs with alternatives to create them in this image build
 mkdir -p /var/lib/alternatives
+dnf install -y dnf-plugins-core
 
 pushd /tmp/kernel_cache
 KERNEL_VERSION=$(find "$KERNEL_NAME"-*.rpm | grep "$(uname -m)" | grep -P "$KERNEL_NAME-\d+\.\d+\.\d+-\d+.*$(rpm -E '%{dist}')" | sed -E "s/$KERNEL_NAME-//;s/\.rpm//")
 popd
 
-if [[ "${KERNEL_FLAVOR}" =~ "centos" ]]; then
-    echo "Building for CentOS"
+if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]]; then
+    echo "Building for CentOS/AlmaLinux"
     RELEASE="$(rpm -E '%centos')"
 
     mkdir -p /var/roothome
@@ -39,11 +40,19 @@ fi
 echo "Installing ${KERNEL_FLAVOR} kernel-cache RPMs..."
 
 # build image has no kernel so this needs nothing fancy, just install, but not UKIs
-#shellcheck disable=SC2046 #we want word splitting
-dnf install -y --allowerasing --setopt=install_weak_deps=False "${PREP_RPMS[@]}" $(find /tmp/kernel_cache/*.rpm -type f | grep "$(uname -m)" | grep -v uki | xargs)
+ls -lh /tmp/kernel_cache/
+KERNEL_RPMS=$(find /tmp/kernel_cache -name "*.rpm" -type f | grep "$(uname -m)" | grep -v uki | tr '\n' ' ')
+echo "DEBUG: KERNEL_RPMS_LIST: ${KERNEL_RPMS}"
+if [[ -z "${KERNEL_RPMS}" ]]; then
+    echo "ERROR: No kernel RPMs found in cache!"
+    exit 1
+fi
+dnf install -y --allowerasing --setopt=install_weak_deps=False "${PREP_RPMS[@]}" ${KERNEL_RPMS}
 
 # after F44 launches, bump to 45
-if [[ "${VERSION}" -ge 44 && -f /etc/fedora-release ]]; then
+# Parse VERSION to get numeric part for comparison (handles "10-kitten" -> "10")
+VERSION_NUM="${VERSION%%-*}"
+if [[ "${VERSION_NUM}" -ge 44 && -f /etc/fedora-release ]]; then
     # pre-release rpmfusion is in a different location
     sed -i "s%free/fedora/releases%free/fedora/development%" /etc/yum.repos.d/rpmfusion-*.repo
     # pre-release rpmfusion needs to enable testing
@@ -79,7 +88,7 @@ if [[ "${DUAL_SIGN}" == "true" ]]; then
 fi
 
 # This is for ZFS more than CentOS|CoreOS
-if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "coreos" ]] || [[ "${KERNEL_FLAVOR}" =~ "longterm" ]]; then
+if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]] || [[ "${KERNEL_FLAVOR}" =~ "coreos" ]] || [[ "${KERNEL_FLAVOR}" =~ "longterm" ]]; then
     mkdir -p "$(dirname /lib/modules/"${KERNEL_VERSION}"/build/certs/signing_key.x509)"
     install -Dm644 /tmp/certs/public_key.der /lib/modules/"${KERNEL_VERSION}"/build/certs/signing_key.x509
     install -Dm644 /tmp/certs/private_key.priv /lib/modules/"${KERNEL_VERSION}"/build/certs/signing_key.pem
@@ -92,6 +101,12 @@ if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "coreos" ]] 
         libtool
         ncompress
         python-cffi
+        rpmdevtools
+        gcc-c++
+        mock
+        akmods
+        kmodtool
+        cabextract
     )
 fi
 if [[ "${KERNEL_FLAVOR}" =~ "coreos" ]] || [[ "${KERNEL_FLAVOR}" =~ "longterm" ]]; then
