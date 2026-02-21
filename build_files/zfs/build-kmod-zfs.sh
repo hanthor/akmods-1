@@ -57,9 +57,15 @@ cd "/tmp/zfs-${ZFS_VERSION}"
 sed -i "s|kernel-devel|${KERNEL_NAME}-devel|" rpm/*/*spec.in
 if ! ./configure \
         -with-linux="/usr/src/kernels/${KERNEL}/" \
-        -with-linux-obj="/usr/src/kernels/${KERNEL}/" \
-    || ! make -j "$(nproc)" rpm-utils rpm-kmod; then
-    cat config.log && exit 1
+        -with-linux-obj="/usr/src/kernels/${KERNEL}/"; then
+    echo "configure FAILED - dumping config.log"
+    cat config.log
+    exit 1
+fi
+
+if ! make -j "$(nproc)" rpm-utils rpm-kmod; then
+    echo "make FAILED (exit code: $?) - the build error is above this line"
+    exit 1
 fi
 
 

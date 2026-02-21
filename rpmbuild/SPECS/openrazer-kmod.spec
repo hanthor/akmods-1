@@ -30,9 +30,9 @@ find . -type f -name '*.c' -exec sed -i "s/#VERSION#/%{version}/" {} \+
 
 for kernel_version  in %{?kernel_versions} ; do
   mkdir -p _kmod_build_${kernel_version%%___*}
-  cp -a *.c _kmod_build_${kernel_version%%___*}/
-  cp -a *.h _kmod_build_${kernel_version%%___*}/
-  cp -a Makefile _kmod_build_${kernel_version%%___*}/
+  cp -a driver/*.c _kmod_build_${kernel_version%%___*}/
+  cp -a driver/*.h _kmod_build_${kernel_version%%___*}/
+  cp -a driver/Makefile _kmod_build_${kernel_version%%___*}/
 done
 
 %build

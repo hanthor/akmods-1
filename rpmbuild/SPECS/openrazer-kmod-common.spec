@@ -22,7 +22,7 @@ Common files for the OpenRazer kernel module driver.
 # No files to install, this is just a dependency placeholder
 
 %files
-%license LICENSE
+%license LICENSES/GPL-2.0-or-later.txt
 %doc README.md
 
 %changelog
