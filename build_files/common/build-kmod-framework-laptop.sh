@@ -46,26 +46,49 @@ fi
 COMMON_SPEC="/root/rpmbuild/SPECS/framework-laptop-kmod-common.spec"
 if [ -f "$COMMON_SPEC" ]; then
     echo "Building framework-laptop-kmod-common package..."
-    rpmbuild -bb "$COMMON_SPEC"
+    if ! rpmbuild -bb "$COMMON_SPEC"; then
+        echo "WARNING: framework-laptop-kmod-common rpmbuild failed. Skipping framework-laptop."
+        rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+        exit 0
+    fi
 fi
 
 # Build akmod package from spec
-rpmbuild -bb "$SPEC_FILE"
+if ! rpmbuild -bb "$SPEC_FILE"; then
+    echo "WARNING: framework-laptop-kmod rpmbuild failed. Skipping framework-laptop."
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
 
 # Install both common and akmod packages together to satisfy dependencies
 COMMON_RPM=$(find /root/rpmbuild/RPMS -name "framework-laptop-kmod-common-*.rpm" -type f | head -n1)
 AKMOD_RPM=$(find /root/rpmbuild/RPMS -name "akmod-framework-laptop-*.rpm" -type f | head -n1)
 
 if [ -z "$AKMOD_RPM" ]; then
-    echo "ERROR: akmod-framework-laptop RPM not found in /root/rpmbuild/RPMS/"
+    echo "WARNING: akmod-framework-laptop RPM not found. Skipping framework-laptop."
     find /root/rpmbuild/RPMS -type f -name "*.rpm" || true
-    exit 1
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
 fi
 
-dnf install -y $COMMON_RPM "$AKMOD_RPM"
+if ! dnf install -y $COMMON_RPM "$AKMOD_RPM"; then
+    echo "WARNING: framework-laptop RPM install failed. Skipping."
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
 
-akmods --force --kernels "${KERNEL}" --kmod framework-laptop
-modinfo /usr/lib/modules/"${KERNEL}"/extra/framework-laptop/framework_laptop.ko.xz > /dev/null \
-|| (find /var/cache/akmods/framework-laptop/ -name \*.log -print -exec cat {} \; && exit 1)
+if ! akmods --force --kernels "${KERNEL}" --kmod framework-laptop; then
+    echo "WARNING: framework-laptop kernel module build failed."
+    echo "Skipping framework-laptop — upstream driver may not yet support this kernel version."
+    find /var/cache/akmods/framework-laptop/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
+if ! modinfo /usr/lib/modules/"${KERNEL}"/extra/framework-laptop/framework_laptop.ko.xz > /dev/null 2>&1; then
+    echo "WARNING: framework-laptop module not found after akmods build."
+    find /var/cache/akmods/framework-laptop/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
 
 rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo

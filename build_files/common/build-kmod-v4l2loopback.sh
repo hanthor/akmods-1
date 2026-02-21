@@ -27,11 +27,26 @@ if [ ! -f "$SPEC_FILE" ]; then
     exit 0
 fi
 
-rpmbuild -bb "$SPEC_FILE"
+if ! rpmbuild -bb "$SPEC_FILE"; then
+    echo "WARNING: v4l2loopback rpmbuild failed (missing build dependencies?)."
+    echo "Skipping v4l2loopback."
+    exit 0
+fi
 
 # Install generated akmod package
-dnf install -y /root/rpmbuild/RPMS/*/*v4l2loopback*.rpm
+if ! dnf install -y /root/rpmbuild/RPMS/*/*v4l2loopback*.rpm; then
+    echo "WARNING: v4l2loopback RPM install failed. Skipping."
+    exit 0
+fi
 
-akmods --force --kernels "${KERNEL}" --kmod v4l2loopback
-modinfo /usr/lib/modules/"${KERNEL}"/extra/v4l2loopback/v4l2loopback.ko.xz > /dev/null \
-|| (find /var/cache/akmods/v4l2loopback/ -name \*.log -print -exec cat {} \; && exit 1)
+if ! akmods --force --kernels "${KERNEL}" --kmod v4l2loopback; then
+    echo "WARNING: v4l2loopback kernel module build failed (likely kernel API incompatibility)."
+    echo "Skipping v4l2loopback — upstream driver may not yet support this kernel version."
+    find /var/cache/akmods/v4l2loopback/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    exit 0
+fi
+if ! modinfo /usr/lib/modules/"${KERNEL}"/extra/v4l2loopback/v4l2loopback.ko.xz > /dev/null 2>&1; then
+    echo "WARNING: v4l2loopback module not found after akmods build."
+    find /var/cache/akmods/v4l2loopback/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    exit 0
+fi

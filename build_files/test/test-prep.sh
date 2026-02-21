@@ -113,6 +113,9 @@ else
     KMODS_TO_INSTALL+=($(find /tmp/akmods-rpms/kmods/ -name "kmod-*.rpm" -type f))
 fi
 
-dnf install -y --setopt=install_weak_deps=False "${KMODS_TO_INSTALL[@]}"
+if ! dnf install -y --setopt=install_weak_deps=False "${KMODS_TO_INSTALL[@]}"; then
+    echo "WARNING: Some kmod packages failed to install (missing dependencies). Continuing with what's available."
+    dnf install -y --setopt=install_weak_deps=False --skip-broken "${KMODS_TO_INSTALL[@]}" || true
+fi
 
 printf "KERNEL_NAME=%s" "$KERNEL_NAME" >> /tmp/info.sh

@@ -23,13 +23,6 @@ if [ -f "${RPMBUILD_DIR}/SOURCES/master.tar.gz" ]; then
     mv "${RPMBUILD_DIR}/SOURCES/master.tar.gz" "${RPMBUILD_DIR}/SOURCES/xone-kmod-master.tar.gz"
 fi
 
-# OpenRazer (uses master.tar.gz)
-echo "Processing openrazer-kmod.spec..."
-spectool -g -C "${RPMBUILD_DIR}/SOURCES" "${RPMBUILD_DIR}/SPECS/openrazer-kmod.spec" || true
-if [ -f "${RPMBUILD_DIR}/SOURCES/master.tar.gz" ]; then
-    mv "${RPMBUILD_DIR}/SOURCES/master.tar.gz" "${RPMBUILD_DIR}/SOURCES/openrazer-kmod-master.tar.gz"
-fi
-
 # V4L2Loopback
 echo "Processing v4l2loopback.spec..."
 spectool -g -C "${RPMBUILD_DIR}/SOURCES" "${RPMBUILD_DIR}/SPECS/v4l2loopback.spec" || true

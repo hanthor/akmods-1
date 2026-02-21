@@ -20,6 +20,7 @@ SIGNING_KEY_1="/tmp/certs/signing_key_1.pem"
 SIGNING_KEY_2="/tmp/certs/signing_key_2.pem"
 PUBLIC_CHAIN="/tmp/certs/public_key_chain.pem"
 
+shopt -s nullglob
 for module in /usr/lib/modules/"${KERNEL}"/extra/*/*.ko*; do
     module_basename=${module:0:-3}
     module_suffix=${module: -3}
@@ -55,22 +56,27 @@ popd
 rm -rf /usr/lib/modules/"${KERNEL}"/extra
 
 # on CentOS, akmods/rpmbuild seems to mangle kernel version in the kmod package name
-pushd /root/rpmbuild/RPMS/"$(uname -m)"/
-mapfile -t RPMPATHS < <(find . -type f -name "\kmod-*.rpm")
-for RPMPATH in "${RPMPATHS[@]}"; do
-    RPM=$(basename "${RPMPATH/\.rpm/}")
-    if [[ ! "$RPM" =~ ${KERNEL} ]]; then
-        RENAME=${RPM%"$(rpm -q --queryformat="%{VERSION}" kernel)"*}
-        RENAME+=$KERNEL
-        RENAME+=${RPM#*"$(rpm -E %dist)"}
-        RPM_RENAME="$(dirname "$RPMPATH")/$RENAME.rpm"
-        mv "$RPMPATH" "$RPM_RENAME"
+RPMS_DIR="/root/rpmbuild/RPMS/$(uname -m)"
+if [[ -d "${RPMS_DIR}" ]]; then
+    pushd "${RPMS_DIR}"
+    mapfile -t RPMPATHS < <(find . -type f -name "\kmod-*.rpm")
+    for RPMPATH in "${RPMPATHS[@]}"; do
+        RPM=$(basename "${RPMPATH/\.rpm/}")
+        if [[ ! "$RPM" =~ ${KERNEL} ]]; then
+            RENAME=${RPM%"$(rpm -q --queryformat="%{VERSION}" kernel)"*}
+            RENAME+=$KERNEL
+            RENAME+=${RPM#*"$(rpm -E %dist)"}
+            RPM_RENAME="$(dirname "$RPMPATH")/$RENAME.rpm"
+            mv "$RPMPATH" "$RPM_RENAME"
+        fi
+    done
+    # Reinstall KMODs for initial check that they were signed
+    mapfile -t kmods < <(find . -maxdepth 1 -name "kmod-*.rpm" -type f)
+    if [[ ${#kmods[@]} -gt 0 ]]; then
+        dnf reinstall -y --allowerasing "${kmods[@]}"
     fi
-done
-# Reinstall KMODs for initial check that they were signed
-mapfile -t kmods < <(ls -1 ./kmod-*.rpm)
-dnf reinstall -y --allowerasing "${kmods[@]}"
-popd
+    popd
+fi
 for module in /usr/lib/modules/"${KERNEL}"/extra/*/*.ko*; do
     if ! modinfo "${module}" >/dev/null; then
         exit 1

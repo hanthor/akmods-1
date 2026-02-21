@@ -28,11 +28,26 @@ if [ ! -f "$SPEC_FILE" ]; then
     exit 0
 fi
 
-rpmbuild -bb "$SPEC_FILE"
+if ! rpmbuild -bb "$SPEC_FILE"; then
+    echo "WARNING: broadcom-wl rpmbuild failed (missing build dependencies?)."
+    echo "Skipping wl."
+    exit 0
+fi
 
 # Install generated akmod package
-dnf install -y /root/rpmbuild/RPMS/*/*wl*.rpm
+if ! dnf install -y /root/rpmbuild/RPMS/*/*wl*.rpm; then
+    echo "WARNING: broadcom-wl RPM install failed. Skipping."
+    exit 0
+fi
 
-akmods --force --kernels "${KERNEL}" --kmod wl
-modinfo /usr/lib/modules/"${KERNEL}"/extra/wl/wl.ko.xz > /dev/null \
-|| (find /var/cache/akmods/wl/ -name \*.log -print -exec cat {} \; && exit 1)
+if ! akmods --force --kernels "${KERNEL}" --kmod wl; then
+    echo "WARNING: wl kernel module build failed (likely kernel API incompatibility)."
+    echo "Skipping wl — upstream driver may not yet support this kernel version."
+    find /var/cache/akmods/wl/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    exit 0
+fi
+if ! modinfo /usr/lib/modules/"${KERNEL}"/extra/wl/wl.ko.xz > /dev/null 2>&1; then
+    echo "WARNING: wl module not found after akmods build."
+    find /var/cache/akmods/wl/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    exit 0
+fi

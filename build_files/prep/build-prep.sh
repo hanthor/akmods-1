@@ -97,6 +97,7 @@ if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" 
         automake
         dkms
         git
+        help2man
         jq
         libtool
         ncompress

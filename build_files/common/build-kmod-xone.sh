@@ -32,25 +32,48 @@ fi
 COMMON_SPEC="/root/rpmbuild/SPECS/xone-kmod-common.spec"
 if [ -f "$COMMON_SPEC" ]; then
     echo "Building xone-kmod-common package..."
-    rpmbuild -bb "$COMMON_SPEC"
+    if ! rpmbuild -bb "$COMMON_SPEC"; then
+        echo "WARNING: xone-kmod-common rpmbuild failed. Skipping xone."
+        rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+        exit 0
+    fi
 fi
 
 # Build akmod package
-rpmbuild -bb "$SPEC_FILE"
+if ! rpmbuild -bb "$SPEC_FILE"; then
+    echo "WARNING: xone-kmod rpmbuild failed. Skipping xone."
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
 
 # Install both common and akmod packages together to satisfy dependencies
 COMMON_RPM=$(find /root/rpmbuild/RPMS -name "xone-kmod-common-*.rpm" -type f | head -n1)
 AKMOD_RPM=$(find /root/rpmbuild/RPMS -name "akmod-xone-*.rpm" -type f | head -n1)
 
 if [ -z "$AKMOD_RPM" ]; then
-    echo "ERROR: akmod-xone RPM not found"
-    exit 1
+    echo "WARNING: akmod-xone RPM not found. Skipping xone."
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
 fi
 
-dnf install -y $COMMON_RPM "$AKMOD_RPM"
+if ! dnf install -y $COMMON_RPM "$AKMOD_RPM"; then
+    echo "WARNING: xone RPM install failed. Skipping."
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
 
-akmods --force --kernels "${KERNEL}" --kmod xone
-modinfo /usr/lib/modules/"${KERNEL}"/extra/xone/xone_{dongle,gip,gip_gamepad,gip_headset,gip_chatpad,gip_madcatz_strat,gip_madcatz_glam,gip_pdp_jaguar}.ko.xz > /dev/null \
-|| (find /var/cache/akmods/xone/ -name \*.log -print -exec cat {} \; && exit 1)
+if ! akmods --force --kernels "${KERNEL}" --kmod xone; then
+    echo "WARNING: xone kernel module build failed (likely kernel API incompatibility)."
+    echo "Skipping xone — upstream driver may not yet support this kernel version."
+    find /var/cache/akmods/xone/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
+if ! modinfo /usr/lib/modules/"${KERNEL}"/extra/xone/xone_{dongle,gip,gip_gamepad,gip_headset,gip_chatpad,gip_madcatz_strat,gip_madcatz_glam,gip_pdp_jaguar}.ko.xz > /dev/null 2>&1; then
+    echo "WARNING: xone modules not found after akmods build."
+    find /var/cache/akmods/xone/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
 
 rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo

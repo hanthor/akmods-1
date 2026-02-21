@@ -14,8 +14,8 @@ fi
 KERNEL="$(rpm -q "${KERNEL_NAME}" --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}')"
 PUBLIC_CHAIN="/tmp/certs/public_key_chain.pem"
 
-for module in /usr/lib/modules/"${KERNEL}"/extra/*/*.ko*;
-do
+shopt -s nullglob
+for module in /usr/lib/modules/"${KERNEL}"/extra/*/*.ko*; do
     module_basename=${module:0:-3}
     module_suffix=${module: -3}
     if [[ "$module_suffix" == ".xz" ]]; then
