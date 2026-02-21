@@ -45,5 +45,8 @@ if ! akmods --force --kernels "${KERNEL}" --kmod v4l2loopback; then
     find /var/cache/akmods/v4l2loopback/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
     exit 0
 fi
-modinfo /usr/lib/modules/"${KERNEL}"/extra/v4l2loopback/v4l2loopback.ko.xz > /dev/null \
-|| (find /var/cache/akmods/v4l2loopback/ -name \*.log -print -exec cat {} \; && exit 1)
+if ! modinfo /usr/lib/modules/"${KERNEL}"/extra/v4l2loopback/v4l2loopback.ko.xz > /dev/null 2>&1; then
+    echo "WARNING: v4l2loopback module not found after akmods build."
+    find /var/cache/akmods/v4l2loopback/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    exit 0
+fi

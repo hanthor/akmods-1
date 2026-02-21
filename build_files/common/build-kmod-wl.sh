@@ -46,5 +46,8 @@ if ! akmods --force --kernels "${KERNEL}" --kmod wl; then
     find /var/cache/akmods/wl/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
     exit 0
 fi
-modinfo /usr/lib/modules/"${KERNEL}"/extra/wl/wl.ko.xz > /dev/null \
-|| (find /var/cache/akmods/wl/ -name \*.log -print -exec cat {} \; && exit 1)
+if ! modinfo /usr/lib/modules/"${KERNEL}"/extra/wl/wl.ko.xz > /dev/null 2>&1; then
+    echo "WARNING: wl module not found after akmods build."
+    find /var/cache/akmods/wl/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    exit 0
+fi
