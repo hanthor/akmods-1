@@ -82,7 +82,6 @@ RUN --mount=type=cache,dst=/var/cache/dnf \
     bash <<'RUNEOF'
 set "${CI+-x}" -euo pipefail
 /tmp/build-kmod-framework-laptop.sh
-/tmp/build-kmod-openrazer.sh
 /tmp/build-kmod-v4l2loopback.sh
 /tmp/build-kmod-wl.sh
 /tmp/build-kmod-xone.sh
