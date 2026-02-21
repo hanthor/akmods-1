@@ -28,10 +28,17 @@ if [ ! -f "$SPEC_FILE" ]; then
     exit 0
 fi
 
-rpmbuild -bb "$SPEC_FILE"
+if ! rpmbuild -bb "$SPEC_FILE"; then
+    echo "WARNING: broadcom-wl rpmbuild failed (missing build dependencies?)."
+    echo "Skipping wl."
+    exit 0
+fi
 
 # Install generated akmod package
-dnf install -y /root/rpmbuild/RPMS/*/*wl*.rpm
+if ! dnf install -y /root/rpmbuild/RPMS/*/*wl*.rpm; then
+    echo "WARNING: broadcom-wl RPM install failed. Skipping."
+    exit 0
+fi
 
 if ! akmods --force --kernels "${KERNEL}" --kmod wl; then
     echo "WARNING: wl kernel module build failed (likely kernel API incompatibility)."

@@ -27,10 +27,17 @@ if [ ! -f "$SPEC_FILE" ]; then
     exit 0
 fi
 
-rpmbuild -bb "$SPEC_FILE"
+if ! rpmbuild -bb "$SPEC_FILE"; then
+    echo "WARNING: v4l2loopback rpmbuild failed (missing build dependencies?)."
+    echo "Skipping v4l2loopback."
+    exit 0
+fi
 
 # Install generated akmod package
-dnf install -y /root/rpmbuild/RPMS/*/*v4l2loopback*.rpm
+if ! dnf install -y /root/rpmbuild/RPMS/*/*v4l2loopback*.rpm; then
+    echo "WARNING: v4l2loopback RPM install failed. Skipping."
+    exit 0
+fi
 
 if ! akmods --force --kernels "${KERNEL}" --kmod v4l2loopback; then
     echo "WARNING: v4l2loopback kernel module build failed (likely kernel API incompatibility)."
