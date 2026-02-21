@@ -49,7 +49,13 @@ fi
 
 dnf install -y $COMMON_RPM "$AKMOD_RPM"
 
-akmods --force --kernels "${KERNEL}" --kmod xone
+if ! akmods --force --kernels "${KERNEL}" --kmod xone; then
+    echo "WARNING: xone kernel module build failed (likely kernel API incompatibility)."
+    echo "Skipping xone — upstream driver may not yet support this kernel version."
+    find /var/cache/akmods/xone/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
 modinfo /usr/lib/modules/"${KERNEL}"/extra/xone/xone_{dongle,gip,gip_gamepad,gip_headset,gip_chatpad,gip_madcatz_strat,gip_madcatz_glam,gip_pdp_jaguar}.ko.xz > /dev/null \
 || (find /var/cache/akmods/xone/ -name \*.log -print -exec cat {} \; && exit 1)
 

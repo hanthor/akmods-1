@@ -32,6 +32,11 @@ rpmbuild -bb "$SPEC_FILE"
 # Install generated akmod package
 dnf install -y /root/rpmbuild/RPMS/*/*v4l2loopback*.rpm
 
-akmods --force --kernels "${KERNEL}" --kmod v4l2loopback
+if ! akmods --force --kernels "${KERNEL}" --kmod v4l2loopback; then
+    echo "WARNING: v4l2loopback kernel module build failed (likely kernel API incompatibility)."
+    echo "Skipping v4l2loopback — upstream driver may not yet support this kernel version."
+    find /var/cache/akmods/v4l2loopback/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    exit 0
+fi
 modinfo /usr/lib/modules/"${KERNEL}"/extra/v4l2loopback/v4l2loopback.ko.xz > /dev/null \
 || (find /var/cache/akmods/v4l2loopback/ -name \*.log -print -exec cat {} \; && exit 1)

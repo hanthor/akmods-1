@@ -33,6 +33,11 @@ rpmbuild -bb "$SPEC_FILE"
 # Install generated akmod package
 dnf install -y /root/rpmbuild/RPMS/*/*wl*.rpm
 
-akmods --force --kernels "${KERNEL}" --kmod wl
+if ! akmods --force --kernels "${KERNEL}" --kmod wl; then
+    echo "WARNING: wl kernel module build failed (likely kernel API incompatibility)."
+    echo "Skipping wl — upstream driver may not yet support this kernel version."
+    find /var/cache/akmods/wl/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    exit 0
+fi
 modinfo /usr/lib/modules/"${KERNEL}"/extra/wl/wl.ko.xz > /dev/null \
 || (find /var/cache/akmods/wl/ -name \*.log -print -exec cat {} \; && exit 1)

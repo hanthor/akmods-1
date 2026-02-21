@@ -49,7 +49,13 @@ fi
 
 dnf install -y $COMMON_RPM "$AKMOD_RPM"
 
-akmods --force --kernels "${KERNEL}" --kmod openrazer
+if ! akmods --force --kernels "${KERNEL}" --kmod openrazer; then
+    echo "WARNING: openrazer kernel module build failed (likely kernel API incompatibility)."
+    echo "Skipping openrazer — upstream driver may not yet support this kernel version."
+    find /var/cache/akmods/openrazer/ -name \*.log -print -exec cat {} \; 2>/dev/null || true
+    rm -f /etc/yum.repos.d/_copr_ublue-os-akmods.repo
+    exit 0
+fi
 modinfo /usr/lib/modules/"${KERNEL}"/extra/openrazer/razerkbd.ko.xz >/dev/null ||
     (find /var/cache/akmods/openrazer/ -name \*.log -print -exec cat {} \; && exit 1)
 modinfo /usr/lib/modules/"${KERNEL}"/extra/openrazer/razermouse.ko.xz >/dev/null ||
