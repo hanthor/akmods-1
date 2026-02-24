@@ -113,8 +113,12 @@ jobs:
         shell: bash
         run: |
           mkdir -p certs
-          echo "${{ secrets.KERNEL_PRIVKEY }}" > certs/private_key.priv
-          echo "${{ secrets.AKMOD_PRIVKEY_20230518 }}" > certs/private_key_2.priv
+          cat << 'EOF' > certs/private_key.priv
+          ${{ secrets.KERNEL_PRIVKEY }}
+          EOF
+          cat << 'EOF' > certs/private_key_2.priv
+          ${{ secrets.AKMOD_PRIVKEY_20230518 }}
+          EOF
           # DEBUG: get character count of key
           wc -c certs/private_key.priv
           wc -c certs/private_key_2.priv
