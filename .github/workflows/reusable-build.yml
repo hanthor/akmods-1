@@ -111,14 +111,13 @@ jobs:
       - name: Retrieve Signing Key
         if: contains(fromJson('["schedule", "workflow_dispatch", "merge_group"]'), github.event_name)
         shell: bash
+        env:
+          SECRET_KERNEL_PRIVKEY: ${{ secrets.KERNEL_PRIVKEY }}
+          SECRET_AKMOD_PRIVKEY: ${{ secrets.AKMOD_PRIVKEY_20230518 }}
         run: |
           mkdir -p certs
-          cat << 'EOF' > certs/private_key.priv
-          ${{ secrets.KERNEL_PRIVKEY }}
-          EOF
-          cat << 'EOF' > certs/private_key_2.priv
-          ${{ secrets.AKMOD_PRIVKEY_20230518 }}
-          EOF
+          printf "%s" "$SECRET_KERNEL_PRIVKEY" > certs/private_key.priv
+          printf "%s" "$SECRET_AKMOD_PRIVKEY" > certs/private_key_2.priv
           # DEBUG: get character count of key
           wc -c certs/private_key.priv
           wc -c certs/private_key_2.priv
