@@ -146,7 +146,6 @@ else
                 echo "Found existing signature at signum $SIGNUM, removing..."
                 sbattach --remove /usr/lib/modules/"${kernel_version}"/vmlinuz
             done
-        fi
     fi
 
     # Sign Kernel with Key
