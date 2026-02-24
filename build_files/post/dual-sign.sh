@@ -63,7 +63,7 @@ if [[ -d "${RPMS_DIR}" ]]; then
     for RPMPATH in "${RPMPATHS[@]}"; do
         RPM=$(basename "${RPMPATH/\.rpm/}")
         if [[ ! "$RPM" =~ ${KERNEL} ]]; then
-            VERSION_STUB="$(rpm -q --queryformat="%{VERSION}" kernel)"
+            VERSION_STUB="$(rpm -q --queryformat="%{VERSION}" "${KERNEL_NAME}")"
             if [[ "$RPM" =~ "${VERSION_STUB}" ]]; then
                 RENAME=${RPM%"${VERSION_STUB}"*}
                 RENAME+=$KERNEL
