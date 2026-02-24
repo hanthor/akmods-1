@@ -127,8 +127,6 @@ if [[ "${kernel_flavor}" == "centos-kmodsig" ]]; then
       /"${kernel_name}-$kernel_version.rpm" \
       /"${kernel_name}-core-$kernel_version.rpm" \
       /"${kernel_name}-modules-$kernel_version.rpm"
-elif [[ "${kernel_flavor}" =~ "almalinux" ]]; then
-    echo "Skipping kernel installation/signing for AlmaLinux"
 else
   dnf install -y \
       /"${kernel_name}-$kernel_version.rpm" \
@@ -138,15 +136,11 @@ else
       /"${kernel_name}-modules-extra-$kernel_version.rpm"
 fi
 
-if [[ "${kernel_flavor}" =~ "almalinux" ]]; then
-    # Skip signing and rebuilding for AlmaLinux
-    :
+# Strip Signatures from non-fedora Kernels
+if [[ ${kernel_flavor} =~ main|coreos|centos ]]; then
+    echo "Will not strip Fedora/CentOS signature(s) from ${kernel_flavor} kernel."
 else
-    # Strip Signatures from non-fedora Kernels
-    if [[ ${kernel_flavor} =~ main|coreos|centos ]]; then
-        echo "Will not strip Fedora/CentOS signature(s) from ${kernel_flavor} kernel."
-    else
-        EXISTING_SIGNATURES="$(sbverify --list /usr/lib/modules/"$kernel_version"/vmlinuz | grep '^signature \([0-9]\+\)$' | sed 's/^signature \([0-9]\+\)$/\1/')" || true
+    EXISTING_SIGNATURES="$(sbverify --list /usr/lib/modules/"$kernel_version"/vmlinuz | grep '^signature \([0-9]\+\)$' | sed 's/^signature \([0-9]\+\)$/\1/')" || true
         if [[ -n "$EXISTING_SIGNATURES" ]]; then
             for SIGNUM in $EXISTING_SIGNATURES; do
                 echo "Found existing signature at signum $SIGNUM, removing..."
