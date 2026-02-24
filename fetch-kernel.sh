@@ -163,21 +163,21 @@ else
     if [[ ${DUAL_SIGN:-} == "true" ]]; then
         SECOND_PUBLIC_KEY_PATH="/etc/pki/kernel/public/public_key_2.crt"
         SECOND_PRIVATE_KEY_PATH="/etc/pki/kernel/private/private_key_2.priv"
-        if [[ ! -s "${KCWD}"/certs/private_key_2.priv ]]; then
-            echo "WARNING: Using test signing key."
-            cp "${KCWD}"/certs/private_key_2.priv{.test,}
-            cp "${KCWD}"/certs/public_key_2.der{.test,}
-            find "${KCWD}"/certs/
+
+        # Check if the secret was actually provided by GitHub (must contain BEGIN PRIVATE KEY)
+        if grep -q "BEGIN PRIVATE KEY" "${KCWD}/certs/private_key_2.priv" 2>/dev/null; then
+            openssl x509 -in "${KCWD}"/certs/public_key_2.der -out "${KCWD}"/certs/public_key_2.crt
+            install -Dm644 "${KCWD}"/certs/public_key_2.crt "$SECOND_PUBLIC_KEY_PATH"
+            install -Dm644 "${KCWD}"/certs/private_key_2.priv "$SECOND_PRIVATE_KEY_PATH"
+            sbsign --cert "$SECOND_PUBLIC_KEY_PATH" --key "$SECOND_PRIVATE_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz --output /usr/lib/modules/"${kernel_version}"/vmlinuz
+            sbverify --list /usr/lib/modules/"${kernel_version}"/vmlinuz
+            if ! sbverify --cert "$SECOND_PUBLIC_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
+                exit 1
+            fi
+            rm -f "$SECOND_PRIVATE_KEY_PATH"
+        else
+            echo "Skipping dual sign: no valid AKMOD_PRIVKEY_20230518 provided."
         fi
-        openssl x509 -in "${KCWD}"/certs/public_key_2.der -out "${KCWD}"/certs/public_key_2.crt
-        install -Dm644 "${KCWD}"/certs/public_key_2.crt "$SECOND_PUBLIC_KEY_PATH"
-        install -Dm644 "${KCWD}"/certs/private_key_2.priv "$SECOND_PRIVATE_KEY_PATH"
-        sbsign --cert "$SECOND_PUBLIC_KEY_PATH" --key "$SECOND_PRIVATE_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz --output /usr/lib/modules/"${kernel_version}"/vmlinuz
-        sbverify --list /usr/lib/modules/"${kernel_version}"/vmlinuz
-        if ! sbverify --cert "$SECOND_PUBLIC_KEY_PATH" /usr/lib/modules/"${kernel_version}"/vmlinuz; then
-            exit 1
-        fi
-        rm -f "$SECOND_PRIVATE_KEY_PATH"
     fi
 
     ln -s / /tmp/buildroot
