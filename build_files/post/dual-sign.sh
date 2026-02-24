@@ -63,9 +63,19 @@ if [[ -d "${RPMS_DIR}" ]]; then
     for RPMPATH in "${RPMPATHS[@]}"; do
         RPM=$(basename "${RPMPATH/\.rpm/}")
         if [[ ! "$RPM" =~ ${KERNEL} ]]; then
-            RENAME=${RPM%"$(rpm -q --queryformat="%{VERSION}" kernel)"*}
-            RENAME+=$KERNEL
-            RENAME+=${RPM#*"$(rpm -E %dist)"}
+            VERSION_STUB="$(rpm -q --queryformat="%{VERSION}" kernel)"
+            if [[ "$RPM" =~ "${VERSION_STUB}" ]]; then
+                RENAME=${RPM%"${VERSION_STUB}"*}
+                RENAME+=$KERNEL
+                RENAME+=${RPM#*"$(rpm -E %dist)"}
+            else
+                # If the stub isn't found, avoid creating a double-arch monster.
+                # Just replace everything after the version/release part if possible,
+                # or just append the kernel version before the dist.
+                DIST_STUB="$(rpm -E %dist)"
+                RENAME="${RPM%${DIST_STUB}*}"
+                RENAME+="-${KERNEL}"
+            fi
             RPM_RENAME="$(dirname "$RPMPATH")/$RENAME.rpm"
             mv "$RPMPATH" "$RPM_RENAME"
         fi
@@ -73,7 +83,8 @@ if [[ -d "${RPMS_DIR}" ]]; then
     # Reinstall KMODs for initial check that they were signed
     mapfile -t kmods < <(find . -maxdepth 1 -name "kmod-*.rpm" -type f)
     if [[ ${#kmods[@]} -gt 0 ]]; then
-        dnf reinstall -y --allowerasing "${kmods[@]}"
+        # Use install instead of reinstall to handle cases where the package isn't already in the image
+        dnf install -y --allowerasing "${kmods[@]}"
     fi
     popd
 fi
