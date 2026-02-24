@@ -162,7 +162,7 @@ else
 
     if [[ ${DUAL_SIGN:-} == "true" ]]; then
         SECOND_PUBLIC_KEY_PATH="/etc/pki/kernel/public/public_key_2.crt"
-        SECOND_PRIVATE_KEY_PATH="/etc/pki/kernel/private/public_key_2.priv"
+        SECOND_PRIVATE_KEY_PATH="/etc/pki/kernel/private/private_key_2.priv"
         if [[ ! -s "${KCWD}"/certs/private_key_2.priv ]]; then
             echo "WARNING: Using test signing key."
             cp "${KCWD}"/certs/private_key_2.priv{.test,}
