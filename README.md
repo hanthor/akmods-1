@@ -1,12 +1,12 @@
-# ublue-os akmods
+# Tuna OS AlmaLinux akmods
 
-[![Build CENTOS akmods](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-centos.yml/badge.svg)](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-centos.yml)[![Build COREOS-STABLE akmods](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-coreos-stable.yml/badge.svg)](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-coreos-stable.yml)[![Build COREOS-TESTING akmods](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-coreos-testing.yml/badge.svg)](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-coreos-testing.yml)[![Build LONGTERM-6.12 akmods](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-longterm-6.12.yml/badge.svg)](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-longterm-6.12.yml)[![Build MAIN akmods](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-main.yml/badge.svg)](https://github.com/ublue-os/akmods/actions/workflows/build-akmods-main.yml)
+[![Build ALMALINUX akmods](https://github.com/tuna-os/akmods-almalinux/actions/workflows/build-akmods-almalinux.yml/badge.svg)](https://github.com/tuna-os/akmods-almalinux/actions/workflows/build-akmods-almalinux.yml)
 
-OCI images providing a set of cached kernel RPMs and extra kernel modules to Universal Blue images. Used for better hardware support and consistent build process.
+OCI images providing a set of cached kernel RPMs and extra kernel modules, specifically ported and built for AlmaLinux 10 to support Tuna OS images. Used for better hardware support and a consistent build process.
 
 ## How it's organized
 
-The [`akmods` images](https://github.com/orgs/ublue-os/packages?repo_name=akmods) are built and published daily. However, there's not a single image but several, given various kernels we now support.
+The [`akmods` images](https://github.com/tuna-os/akmods-almalinux/packages) are built and published. However, there's not a single image but several, given various targets we now support.
 
 The akmods packages are divided up for building in a few different "groups":
 
@@ -16,15 +16,11 @@ The akmods packages are divided up for building in a few different "groups":
 
 Each of these images contains a cached copy of the respective kernel RPMs compatible with the respective kmods for the image.
 
-Builds also run for different kernels:
+Builds also run for different kernel flavors:
 
-- `main` - Mainline Fedora Kernel
-- `coreos-stable` - Current Fedora CoreOS stable kernel version
-- `coreos-testing` - Current Fedora CoreOS testing kernel version
-- `Centos` - Mainline Centos Kernel
-- `Longterm-6.12` - Fedora Kernel on Kernel 6.12 LTS
+- `almalinux` - Built against AlmaLinux 10 / Kitten
 
-See `images.yaml` for which akmods packages are built for each Kernel
+See `images.yaml` for which akmods packages are built for the Kernel
 
 ## Features
 
@@ -66,9 +62,9 @@ Using common images as an example, add something like this to your Containerfile
 
 ## Verification
 
-These images are signed with sisgstore's [cosign](https://docs.sigstore.dev/about/overview/). You can verify the signature by downloading the `cosign.pub` key from this repo and running the following command, replacing `KERNEL_FLAVOR` with whichever kernel you are using and `RELEASE` with either `40`, `41` or `42`:
+These images are signed with sisgstore's [cosign](https://docs.sigstore.dev/about/overview/). You can verify the signature by downloading the `cosign.pub` key from this repo and running the following command, replacing `KERNEL_FLAVOR` with whichever kernel you are using and `RELEASE` with the release version:
 
-    cosign verify --key cosign.pub ghcr.io/ublue-os/akmods:KERNEL_FLAVOR-RELEASE
+    cosign verify --key cosign.pub ghcr.io/tuna-os/akmods-almalinux:KERNEL_FLAVOR-RELEASE
 
 ## Local Building/Testing
 
@@ -88,10 +84,10 @@ Since nothing additional was set. The following will occur. The build scripts wi
 - AKMODS_TARGET - The akmods package to build
 
 ```bash
-AKMODS_KERNEL=centos AKMODS_VERSION=10 AKMODS_TARGET=zfs just build
+AKMODS_KERNEL=almalinux AKMODS_VERSION=10 AKMODS_TARGET=zfs just build
 ```
 
-Will determine the current centos kernel version, download the rpms and sign them, and will then build the zfs package.
+Will determine the current AlmaLinux kernel version, download the rpms and sign them, and will then build the zfs package.
 
 You can also populate a `.env` file to store your current settings.
 
