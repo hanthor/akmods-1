@@ -17,6 +17,7 @@ if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" 
     dnf config-manager --set-enabled crb
 
     if [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]]; then
+        RELEASE="$(rpm -E '%rhel')"
         PREP_RPMS+=("epel-release")
     else
         RELEASE="$(rpm -E '%centos')"
