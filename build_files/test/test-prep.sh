@@ -11,14 +11,10 @@ popd
 ### PREPARE REPOS
 if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]]; then
     echo "Building for CentOS/AlmaLinux"
+    RELEASE="$(rpm -E '%centos')"
     mkdir -p /var/roothome
+    RPM_PREP+=("https://dl.fedoraproject.org/pub/epel/epel-release-latest-${RELEASE}.noarch.rpm")
     dnf config-manager --set-enabled crb
-    if [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]]; then
-        RPM_PREP+=("epel-release")
-    else
-        RELEASE="$(rpm -E '%centos')"
-        RPM_PREP+=("https://dl.fedoraproject.org/pub/epel/epel-release-latest-${RELEASE}.noarch.rpm")
-    fi
 else
     echo "Building for Fedora"
     RELEASE="$(rpm -E '%fedora')"
