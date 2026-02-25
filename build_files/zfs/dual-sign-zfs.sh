@@ -52,7 +52,7 @@ mapfile -t RPMPATHS < <(find . -type f -name "\kmod-*.rpm")
 for RPMPATH in "${RPMPATHS[@]}"; do
     RPM=$(basename "${RPMPATH/\.rpm/}")
     if [[ ! "$RPM" =~ ${KERNEL} ]]; then
-        RENAME=${RPM%"$(rpm -q --queryformat="%{VERSION}" kernel)"*}
+        RENAME=${RPM%"$(rpm -q --queryformat="%{VERSION}" "${KERNEL_NAME}")"*}
         RENAME+=$KERNEL
         RENAME+=${RPM#*"$(rpm -E %dist)"}
         RPM_RENAME="$(dirname "$RPMPATH")/$RENAME.rpm"

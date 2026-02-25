@@ -17,7 +17,14 @@ if [[ "${KERNEL_FLAVOR}" =~ "centos" ]] || [[ "${KERNEL_FLAVOR}" =~ "almalinux" 
     dnf config-manager --set-enabled crb
 
     if [[ "${KERNEL_FLAVOR}" =~ "almalinux" ]]; then
-        PREP_RPMS+=("epel-release")
+        RELEASE="$(rpm -E '%rhel')"
+        # AlmaLinux x86_64-v2 images come pre-installed with epel-release-almalinux-altarch
+        # Installing the standard epel-release causes a conflict.
+        if ! rpm -q epel-release-almalinux-altarch &>/dev/null; then
+            PREP_RPMS+=("epel-release")
+        else
+            echo "Skipping epel-release installation as epel-release-almalinux-altarch is already present."
+        fi
     else
         RELEASE="$(rpm -E '%centos')"
         PREP_RPMS+=("https://dl.fedoraproject.org/pub/epel/epel-release-latest-${RELEASE}.noarch.rpm")
